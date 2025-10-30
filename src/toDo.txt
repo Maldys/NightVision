@@ -1,0 +1,6 @@
+-navraty
+-fsm all states 
+-overlay text show-er
+-context to config text and back
+...
+-utils
