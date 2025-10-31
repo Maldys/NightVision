@@ -4,12 +4,15 @@ from signal import pause
 from queue import Queue
 import time
 from fsm import FSM
-from event import Event
+from fsm_event import Fsm_Event
 from transitions import transitions
 from state import State
+from context import Context
 
-queue = Queue()
-       
+
+
+ctx = Context()
+      
     
 
 
@@ -17,7 +20,7 @@ queue = Queue()
 menu_btn = Button(5)
 
 def menu_short():
-    queue.add(Event.MENU_BTN)
+    ctx.fsm_events.put(Fsm_Event.MENU_BTN)
 
 menu_btn.when_released = menu_short
 
@@ -25,7 +28,7 @@ menu_btn.when_released = menu_short
 rec_btn = Button(6)
 
 def rec_short():
-    queue.add(Event.REC_BTN)
+    ctx.fsm_events.put(Fsm_Event.REC_BTN)
         
 rec_btn.when_released = rec_short
 
@@ -38,12 +41,12 @@ def power_short():
     if power_held:
         power_held = False
     else:
-        queue.add(Event.PWR_BTN_SHORT)
+        ctx.fsm_events.put(Fsm_Event.PWR_BTN_SHORT)
         
 def power_long():
     global power_held
     power_held = True
-    queue.add(Event.PWR_BTN_LONG)
+    ctx.fsm_events.put(Fsm_Event.PWR_BTN_LONG)
 
 power_btn.when_released = power_short
 power_btn.when_held = power_long
@@ -52,7 +55,7 @@ power_btn.when_held = power_long
 enc_a_btn = Button(22)
 
 def enc_a_short():
-    queue.add(Event.ENC_A_BTN)
+    ctx.fsm_events.put(Fsm_Event.ENC_A_BTN)
 
         
 enc_a_btn.when_released = enc_a_short
@@ -62,11 +65,11 @@ enc_a_btn.when_released = enc_a_short
 enc_a = RotaryEncoder(17, 27)
 
 def enc_a_left():
-    queue.add(Event.ENC_A_LEFT)
+    ctx.fsm_events.put(Fsm_Event.ENC_A_LEFT)
 
 
 def enc_a_right():
-    queue.add(Event.ENC_A_RIGHT)
+    ctx.fsm_events.put(Fsm_Event.ENC_A_RIGHT)
 
 
 enc_a.when_rotated_clockwise = enc_a_left
@@ -74,11 +77,13 @@ enc_a.when_rotated_counter_clockwise = enc_a_right
 
 
 
-fsm = FSM(State.OFF, transitions)
+fsm = FSM(State.OFF, transitions, ctx)
+
 
 
 while(True):
-    fsm.handle_trans(queue.get_first())
+    fsm.handle_trans(ctx.fsm_events.get())
+    
 
 
 
