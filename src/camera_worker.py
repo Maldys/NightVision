@@ -18,5 +18,5 @@ def camera_worker(ctx: Context):
 
 
         if cmd == Cam_Event.OFF:
-            ctx.cam_thread.stop_event.set()
+            ctx.stop_event.set()
             running = False

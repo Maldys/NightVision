@@ -18,10 +18,8 @@ def test_trans(state, ctx: Context):
 
 def cam_live(state, ctx: Context):
     logger(state,ctx)
-    if ctx.cam_thread == None or not ctx.cam_thread.is_alive():
-        ctx.stop_event.clear()
-        ctx.cam_thread = Thread(target=camera_worker, args=(ctx,))
-        ctx.cam_thread.start()
+    ctx.start_camera()
+    
 
 def cam_off(state, ctx: Context):
     logger(state,ctx)
@@ -32,12 +30,13 @@ def cam_off(state, ctx: Context):
 transitions = {
     (State.OFF, Fsm_Event.PWR_BTN_LONG): (State.LIVE, cam_live), #misto (state, event): state jde udelat (state, event): (state, acition)
     (State.LIVE, Fsm_Event.MENU_BTN): (State.MENU, test_trans),
+    ('ANY', Fsm_Event.PWR_BTN_LONG): (State.OFF, cam_off),
     (State.MENU, Fsm_Event.MENU_BTN): (State.LIVE, cam_live),
     (State.LIVE, Fsm_Event.REC_BTN): (State.CLIP, test_trans),
     (State.CLIP, Fsm_Event.REC_BTN): (State.LIVE, cam_live),
-    (State.LIVE, Fsm_Event.PWR_BTN_LONG): (State.OFF, test_trans),
-    (State.CLIP, Fsm_Event.PWR_BTN_LONG): (State.OFF, test_trans),
-    (State.MENU, Fsm_Event.PWR_BTN_LONG): (State.OFF, test_trans),
+    (State.LIVE, Fsm_Event.PWR_BTN_LONG): (State.OFF, cam_off),
+    (State.CLIP, Fsm_Event.PWR_BTN_LONG): (State.OFF, cam_off),
+    (State.MENU, Fsm_Event.PWR_BTN_LONG): (State.OFF, cam_off),
     (State.MENU, None): (State.MENU_CROSS, test_trans),#vstup do menu/cross
     (State.MENU_CROSS, Fsm_Event.ENC_A_LEFT): (State.MENU_LANGUAGE, test_trans),#cross-language main
     (State.MENU_CROSS, Fsm_Event.ENC_A_RIGHT): (State.MENU_VIEW_MODE, test_trans),#cross-view_mode main
