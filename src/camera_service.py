@@ -11,6 +11,8 @@ class Camera_Service:
       self.stop_event = Event()
       self.running_event = Event()
       self.picam = None
+      self.overlay_enabled = False
+      self.redo_overlay = False
 
     #z venku volatelne metody
     def live(self):
@@ -28,10 +30,22 @@ class Camera_Service:
             self.thread.join(timeout=2.0)
         self.thread = None
 
+    def show_overlay(self):
+        self.cmd_queue.put(Cam_Event.SHOW_OVERLAY)
+    
+    def hide_overlay(self):
+        self.cmd_queue.put(Cam_Event.HIDE_OVERLAY)
+
+    def update_overlay(self):
+        self.cmd_queue.put(Cam_Event.UPDATE_OVERLAY)
+
     #vnitrni metody
     def worker(self):
+        config = self.picam.create_preview_configuration(
+        main={"size": (1280, 720), "format": "RGB888"}
+        )
         self.picam = Picamera2()
-        self.picam.configure(self.picam.create_preview_configuration())
+        self.picam.configure(self.picam.create_preview_configuration(config))
         self.picam.start_preview(Preview.DRM) 
         self.picam.start()
         self.running_event.set()
@@ -62,9 +76,15 @@ class Camera_Service:
                             pass
                         self.running_event.clear()
                     alive = False
+                elif cmd == Cam_Event.SHOW_OVERLAY:
+                    overlay_enabled = True
+                elif cmd == Cam_Event.HIDE_OVERLAY:
+                    overlay_enabled = False
+                elif cmd == Cam_Event.UPDATE_OVERLAY:
+                    redo_overlay = True
+                    
         finally:
             if self.picam:
-                if self.picam:
                     try: self.picam.stop_preview()
                     except Exception: pass
                     try: self.picam.stop()

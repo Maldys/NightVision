@@ -13,6 +13,6 @@ class Context:
     fsm_events: Queue = field(default_factory=Queue)
     state: State = State.OFF
     camera: Camera_Service = field(default_factory=Camera_Service)
-    current_crs: None
+    
     
    
