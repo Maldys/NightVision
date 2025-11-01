@@ -2,6 +2,9 @@ from state import State
 from fsm_event import Fsm_Event
 from context import Context
 from camera_worker import camera_worker
+from fsm_event import Fsm_Event
+from cam_event  import Cam_Event
+from threading import Thread
 
 
 
@@ -15,14 +18,23 @@ def test_trans(state, ctx: Context):
 
 def cam_live(state, ctx: Context):
     logger(state,ctx)
-    
+    if ctx.cam_thread == None or not ctx.cam_thread.is_alive():
+        ctx.stop_event.clear()
+        ctx.cam_thread = Thread(target=camera_worker, args=(ctx,))
+        ctx.cam_thread.start()
+
+def cam_off(state, ctx: Context):
+    logger(state,ctx)
+    ctx.shutdown_camera()
+
+
 
 transitions = {
     (State.OFF, Fsm_Event.PWR_BTN_LONG): (State.LIVE, cam_live), #misto (state, event): state jde udelat (state, event): (state, acition)
     (State.LIVE, Fsm_Event.MENU_BTN): (State.MENU, test_trans),
     (State.MENU, Fsm_Event.MENU_BTN): (State.LIVE, cam_live),
     (State.LIVE, Fsm_Event.REC_BTN): (State.CLIP, test_trans),
-    (State.CLIP, Fsm_Event.REC_BTN): (State.LIVE, test_trans),
+    (State.CLIP, Fsm_Event.REC_BTN): (State.LIVE, cam_live),
     (State.LIVE, Fsm_Event.PWR_BTN_LONG): (State.OFF, test_trans),
     (State.CLIP, Fsm_Event.PWR_BTN_LONG): (State.OFF, test_trans),
     (State.MENU, Fsm_Event.PWR_BTN_LONG): (State.OFF, test_trans),

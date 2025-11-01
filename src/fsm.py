@@ -2,6 +2,7 @@ from fsm_event import Fsm_Event
 from state import State
 from context import Context
 from queue import Queue
+from cam_event import Cam_Event
 
 
 
@@ -23,6 +24,7 @@ class FSM:
                 action(next_state, self.ctx)
         elif not key in self.transitions and event == Fsm_Event.PWR_BTN_LONG:
             self.state = State.OFF
+            self.ctx.shutdown_camera()
             print('OFF')
             
         
