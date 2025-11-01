@@ -18,12 +18,13 @@ def test_trans(state, ctx: Context):
 
 def cam_live(state, ctx: Context):
     logger(state,ctx)
-    ctx.start_camera()
+    ctx.camera.live()
+        
     
 
 def cam_off(state, ctx: Context):
     logger(state,ctx)
-    ctx.shutdown_camera()
+    ctx.camera.shutdown()
 
 
 
