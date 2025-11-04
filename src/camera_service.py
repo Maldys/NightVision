@@ -3,6 +3,8 @@ from queue import Queue, Empty
 from picamera2 import Picamera2, Preview
 import time
 from cam_event import Cam_Event
+import numpy as np
+import cv2
 
 class Camera_Service:
     def __init__(self):
@@ -13,6 +15,14 @@ class Camera_Service:
       self.picam = None
       self.overlay_enabled = False
       self.redo_overlay = False
+      
+      self.ctx = None
+      self.cross_params = None
+
+    def attach(self, ctx):
+        self.ctx = ctx
+        self.cross_params = ctx.cross_params
+    
 
     #z venku volatelne metody
     def live(self):
@@ -38,19 +48,56 @@ class Camera_Service:
 
     def update_overlay(self):
         self.cmd_queue.put(Cam_Event.UPDATE_OVERLAY)
+        self.make_overlay
 
     #vnitrni metody
+
+    def make_overlay(self) :
+        w, h = self.ctx.window_size
+
+        rgba = np.zeros((h, w, 4), dtype=np.uint8)
+
+        if self.cross_params is None:
+            return rgba
+        
+        r, g, b = self.cross_params.color
+
+        alpha = rgba[:, :, 3]
+    
+        alpha_c = np.ascontiguousarray(alpha)
+
+        cx = w // 2 + self.ctx.cross_params.x_offset
+        cy = h // 2 + self.ctx.cross_params.y_offset
+
+        sz = self.ctx.cross_params.size #size
+        th = self.ctx.cross_params.thickness #line thickness
+
+        cv2.line(alpha_c, (cx - sz, cy), (cx + sz, cy), 255, th, lineType=cv2.LINE_AA)
+        cv2.line(alpha_c, (cx, cy - sz), (cx, cy + sz), 255, th, lineType=cv2.LINE_AA)
+
+        rgba[:, :, 3] = alpha_c
+
+        mask = alpha_c > 0
+        rgba[:, :, 0][mask] = r  # R
+        rgba[:, :, 1][mask] = g  # G
+        rgba[:, :, 2][mask] = b  # B
+
+
+        return rgba
+        
+
     def worker(self):
-        config = self.picam.create_preview_configuration(
-        main={"size": (1280, 720), "format": "RGB888"}
-        )
         self.picam = Picamera2()
-        self.picam.configure(self.picam.create_preview_configuration(config))
+        self.picam.configure(self.picam.create_preview_configuration(main={"size": self.ctx.window_size, "format": "RGB888"}))
         self.picam.start_preview(Preview.DRM) 
         self.picam.start()
         self.running_event.set()
+        overlay = self.make_overlay()
+        self.picam.set_overlay(overlay)
 
         alive = True
+        overlay = None
+
 
         try:
             while alive and not self.stop_event.is_set():
@@ -82,6 +129,7 @@ class Camera_Service:
                     overlay_enabled = False
                 elif cmd == Cam_Event.UPDATE_OVERLAY:
                     redo_overlay = True
+                    
                     
         finally:
             if self.picam:
