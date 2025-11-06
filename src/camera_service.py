@@ -1,6 +1,6 @@
 from threading import Thread, Event
 from queue import Queue, Empty
-from picamera2 import Picamera2, Preview
+from picamera2 import Picamera2, Preview, MappedArray
 import time
 from cam_event import Cam_Event
 import numpy as np
@@ -13,7 +13,7 @@ class Camera_Service:
       self.stop_event = Event()
       self.running_event = Event()
       self.picam = None
-      self.overlay_enabled = False
+      self.overlay_enabled = True
       self.redo_overlay = False
       
       self.ctx = None
@@ -48,67 +48,67 @@ class Camera_Service:
 
     def update_overlay(self):
         self.cmd_queue.put(Cam_Event.UPDATE_OVERLAY)
-        self.make_overlay
+
 
     #vnitrni metody
 
-    def make_overlay(self) :
-        w, h = self.ctx.window_size
+    def frame_callback(self, request) :
+        try:
+            if self.cross_params is None or not self.overlay_enabled:
+                return
 
-        rgba = np.zeros((h, w, 4), dtype=np.uint8)
-
-        if self.cross_params is None:
-            return rgba
-        
-        r, g, b = self.cross_params.color
-
-        alpha = rgba[:, :, 3]
-    
-        alpha_c = np.ascontiguousarray(alpha)
-
-        cx = w // 2 + self.ctx.cross_params.x_offset
-        cy = h // 2 + self.ctx.cross_params.y_offset
-
-        sz = self.ctx.cross_params.size #size
-        th = self.ctx.cross_params.thickness #line thickness
-
-        cv2.line(alpha_c, (cx - sz, cy), (cx + sz, cy), 255, th, lineType=cv2.LINE_AA)
-        cv2.line(alpha_c, (cx, cy - sz), (cx, cy + sz), 255, th, lineType=cv2.LINE_AA)
-
-        rgba[:, :, 3] = alpha_c
-
-        mask = alpha_c > 0
-        rgba[:, :, 0][mask] = r  # R
-        rgba[:, :, 1][mask] = g  # G
-        rgba[:, :, 2][mask] = b  # B
+            with MappedArray(request, "main") as m:
+                frame = m.array
+                h, w = frame.shape[:2] 
+            cx = w // 2 + self.ctx.cross_params.x_offset
+            cy = h // 2 + self.ctx.cross_params.y_offset
 
 
-        return rgba
+            sz = self.ctx.cross_params.size #size
+            th = self.ctx.cross_params.thickness #line thickness
+
+                 
+
+
+
+            r, g, b = self.ctx.cross_params.color
+            color = (b,g,r)
+
+            cv2.line(frame, (cx - sz, cy), (cx + sz, cy), color, th, lineType=cv2.LINE_AA)
+            cv2.line(frame, (cx, cy - sz), (cx, cy + sz), color, th, lineType=cv2.LINE_AA)
+
+        except Exception as e:
+            print("frame_callback error:", repr(e))
         
 
     def worker(self):
         self.picam = Picamera2()
-        self.picam.configure(self.picam.create_preview_configuration(main={"size": self.ctx.window_size, "format": "RGB888"}))
-        self.picam.start_preview(Preview.DRM) 
+        self.picam.configure(self.picam.create_preview_configuration(main={"size": self.ctx.window_size, "format": "RGB888"},  display="main"))
+
+        self.overlay_enabled = True
+
+        self.picam.post_callback = self.frame_callback
+
+        self.picam.start_preview(Preview.DRM, x=0, y=0, width=640, height=480) 
         self.picam.start()
         self.running_event.set()
-        overlay = self.make_overlay()
-        self.picam.set_overlay(overlay)
+        
+        
 
         alive = True
-        overlay = None
+  
 
 
         try:
             while alive and not self.stop_event.is_set():
                 try:
-                    cmd = cmd_queue.get(timeout=0.05)
-                except:
+                    cmd = self.cmd_queue.get(timeout=0.05)
+                except Empty:
                     continue
 
                 if cmd == Cam_Event.LIVE:
                     if not self.running_event.is_set():
-                        self.picam.running_event.set()
+                        self.running_event.set()
                         self.picam.start()
 
                 elif cmd == Cam_Event.OFF:
@@ -124,11 +124,11 @@ class Camera_Service:
                         self.running_event.clear()
                     alive = False
                 elif cmd == Cam_Event.SHOW_OVERLAY:
-                    overlay_enabled = True
+                    self.overlay_enabled = True
                 elif cmd == Cam_Event.HIDE_OVERLAY:
-                    overlay_enabled = False
+                    self.overlay_enabled = False
                 elif cmd == Cam_Event.UPDATE_OVERLAY:
-                    redo_overlay = True
+                    self.redo_overlay = True
                     
                     
         finally:
