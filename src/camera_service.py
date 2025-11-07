@@ -52,7 +52,25 @@ class Camera_Service:
 
     #vnitrni metody
 
-    def frame_callback(self, request) :
+    def crop_sides(self, frame):
+        _,fw, ch = frame.shape
+        w,_ = self.ctx.window_size
+        if fw > w:
+            crop = (fw - w) // 2
+            frame = frame[:, crop:fw - crop]
+            print(frame.shape)
+        return frame
+
+        
+        
+        
+
+        
+
+
+
+
+    def frame_callback(self, request):
         try:
             if self.cross_params is None or not self.overlay_enabled:
                 return
@@ -67,15 +85,13 @@ class Camera_Service:
             sz = self.ctx.cross_params.size #size
             th = self.ctx.cross_params.thickness #line thickness
 
-                 
-
-
-
             r, g, b = self.ctx.cross_params.color
             color = (b,g,r)
 
             cv2.line(frame, (cx - sz, cy), (cx + sz, cy), color, th, lineType=cv2.LINE_AA)
             cv2.line(frame, (cx, cy - sz), (cx, cy + sz), color, th, lineType=cv2.LINE_AA)
+            
+            
 
         except Exception as e:
             print("frame_callback error:", repr(e))
@@ -83,13 +99,13 @@ class Camera_Service:
 
     def worker(self):
         self.picam = Picamera2()
-        self.picam.configure(self.picam.create_preview_configuration(main={"size": self.ctx.window_size, "format": "RGB888"},  display="main"))
+        self.picam.configure(self.picam.create_preview_configuration(main={"size": (480,480), "format": "RGB888"},  display="main"))
 
         self.overlay_enabled = True
 
         self.picam.post_callback = self.frame_callback
 
-        self.picam.start_preview(Preview.DRM, x=0, y=0, width=640, height=480) 
+        self.picam.start_preview(Preview.DRM, x = 0, y = 0, width = 480, height = 480) 
         self.picam.start()
         self.running_event.set()
         

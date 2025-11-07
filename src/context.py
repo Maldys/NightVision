@@ -15,7 +15,7 @@ class Context:
     state: State = State.OFF
     camera: Camera_Service = field(default_factory=Camera_Service)
     cross_params: Crosshair_params = field(default_factory=Crosshair_params)
-    window_size: tuple = (640, 480)
+    window_size: tuple = (720, 720)
 
     def __post_init__(self):
         self.camera.attach(self)
