@@ -9,7 +9,6 @@ class Crosshair_params:
     size: int = 40
     x_offset: int = 0
     y_offset: int = 0
-    show_text: bool = False
-    text: str = "NV"
+    text_to_show: str = ''
     text_scale: float = 0.6
     text_thickness: int = 1

@@ -14,7 +14,9 @@ class Camera_Service:
       self.running_event = Event()
       self.picam = None
       self.overlay_enabled = True
-      self.redo_overlay = False
+      self.show_toast = False
+
+
       
       self.ctx = None
       self.cross_params = None
@@ -50,24 +52,7 @@ class Camera_Service:
         self.cmd_queue.put(Cam_Event.UPDATE_OVERLAY)
 
 
-    #vnitrni metody
-
-    def crop_sides(self, frame):
-        _,fw, ch = frame.shape
-        w,_ = self.ctx.window_size
-        if fw > w:
-            crop = (fw - w) // 2
-            frame = frame[:, crop:fw - crop]
-            print(frame.shape)
-        return frame
-
-        
-        
-        
-
-        
-
-
+    #vnitrni metody     
 
 
     def frame_callback(self, request):
@@ -78,8 +63,8 @@ class Camera_Service:
             with MappedArray(request, "main") as m:
                 frame = m.array
                 h, w = frame.shape[:2] 
-            cx = w // 2 + self.ctx.cross_params.x_offset
-            cy = h // 2 + self.ctx.cross_params.y_offset
+            cx = w // 2 - self.ctx.cross_params.x_offset
+            cy = h // 2 - self.ctx.cross_params.y_offset
 
 
             sz = self.ctx.cross_params.size #size
@@ -90,6 +75,33 @@ class Camera_Service:
 
             cv2.line(frame, (cx - sz, cy), (cx + sz, cy), color, th, lineType=cv2.LINE_AA)
             cv2.line(frame, (cx, cy - sz), (cx, cy + sz), color, th, lineType=cv2.LINE_AA)
+
+            if self.ctx.cross_params.text_to_show:
+
+
+                text = self.ctx.cross_params.text_to_show
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                font_scale = 0.8
+                thickness = 2
+
+                # Zjistí rozměr textu
+                (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+
+                # Výpočet pozice pro zarovnání na střed
+                x = (frame.shape[1] - text_width) // 2
+
+                y_cross_offset = self.ctx.cross_params.y_offset
+        
+                if y_cross_offset <= 0:
+                    y = 120
+                else:
+                    y = 360
+                
+                cv2.putText(img = frame,text = text, org = (x,y), fontFace=font, fontScale=font_scale, color=color, thickness=thickness, lineType=cv2.LINE_AA)
+
+                
+
+
             
             
 
@@ -143,8 +155,9 @@ class Camera_Service:
                     self.overlay_enabled = True
                 elif cmd == Cam_Event.HIDE_OVERLAY:
                     self.overlay_enabled = False
-                elif cmd == Cam_Event.UPDATE_OVERLAY:
-                    self.redo_overlay = True
+                elif cmd == Cam_Event.TOAST_TEXT:
+                    self.show_toast = True
+
                     
                     
         finally:
