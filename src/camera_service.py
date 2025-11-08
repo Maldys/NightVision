@@ -1,4 +1,4 @@
-from threading import Thread, Event
+from threading import Thread, Event, Timer
 from queue import Queue, Empty
 from picamera2 import Picamera2, Preview, MappedArray
 import time
@@ -14,7 +14,8 @@ class Camera_Service:
       self.running_event = Event()
       self.picam = None
       self.overlay_enabled = True
-      self.show_toast = False
+      self.toast = False
+      self.toast_text = ""
 
 
       
@@ -48,11 +49,18 @@ class Camera_Service:
     def hide_overlay(self):
         self.cmd_queue.put(Cam_Event.HIDE_OVERLAY)
 
-    def update_overlay(self):
-        self.cmd_queue.put(Cam_Event.UPDATE_OVERLAY)
+    def show_toast(self, text: str):
+        self.cmd_queue.put(Cam_Event.TOAST)
+        self.toast_text = text
+
+
 
 
     #vnitrni metody     
+
+    def clear_toast(self):
+        self.toast = False
+        self.toast_text = ''
 
 
     def frame_callback(self, request):
@@ -99,7 +107,28 @@ class Camera_Service:
                 
                 cv2.putText(img = frame,text = text, org = (x,y), fontFace=font, fontScale=font_scale, color=color, thickness=thickness, lineType=cv2.LINE_AA)
 
-                
+            if self.toast and self.toast_text:
+                self.toast = False
+
+                t = Timer(2.0, self.clear_toast)
+                t.start()
+
+
+            if self.toast_text:
+                text = self.toast_text
+                font = cv2.FONT_HERSHEY_SIMPLEX
+                font_scale = 1
+                thickness = 2
+
+                # Zjistí rozměr textu
+                (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+
+                # Výpočet pozice pro zarovnání na střed
+                x = (frame.shape[1] - text_width) // 2
+                y = (frame.shape[0] - text_height) // 2
+                                
+                cv2.putText(img = frame,text = text, org = (x,y), fontFace=font, fontScale=font_scale, color=color, thickness=thickness, lineType=cv2.LINE_AA)
+  
 
 
             
@@ -155,8 +184,8 @@ class Camera_Service:
                     self.overlay_enabled = True
                 elif cmd == Cam_Event.HIDE_OVERLAY:
                     self.overlay_enabled = False
-                elif cmd == Cam_Event.TOAST_TEXT:
-                    self.show_toast = True
+                elif cmd == Cam_Event.TOAST:
+                    self.toast = True
 
                     
                     

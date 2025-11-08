@@ -34,6 +34,10 @@ def off_menu_trans(state, ctx: Context):
     text = ''
     ctx.cross_params.text_to_show = text
 
+def setter_trans(state, ctx: Context, text: str):
+    logger(state,ctx)
+    ctx.camera.show_toast(text)
+
 
 
 
