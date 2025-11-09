@@ -34,9 +34,27 @@ def off_menu_trans(state, ctx: Context):
     text = ''
     ctx.cross_params.text_to_show = text
 
-def setter_trans(state, ctx: Context, text: str):
-    logger(state,ctx)
-    ctx.camera.show_toast(text)
+def setter_trans(state, ctx: Context, toast_text: str):
+    ctx.camera.show_toast(toast_text)
+    text = str(state).replace('State.', "")
+    ctx.cross_params.text_to_show = text
+
+
+#obsluzne funkce (set xy, set color etc.)
+
+def set_color(state, ctx: Context):
+    if state == State.MENU_CROSS_COLOR_R:
+        ctx.cross_params.color = (255, 0, 0)
+        color_str = 'RED'
+    elif state == State.MENU_CROSS_COLOR_G:
+        ctx.cross_params.color = (0, 255, 0)
+        color_str = 'GREEN'
+    elif state == State.MENU_CROSS_COLOR_B:
+        ctx.cross_params.color = (0, 0, 255)
+        color_str = 'BLUE'
+    
+    setter_trans(state, ctx, color_str + ' COLOR SET')
+
 
 
 
@@ -56,13 +74,13 @@ transitions = {
     (State.MENU_CROSS_Y, Fsm_Event.ENC_A_LEFT): (State.MENU_CROSS_X, menu_trans),#x-y
     (State.MENU_CROSS_COLOR, Fsm_Event.ENC_A_RIGHT): (State.MENU_CROSS_TYPE, menu_trans),#color-type
     (State.MENU_CROSS_COLOR, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_COLOR_R, menu_trans),#color/r
-    (State.MENU_CROSS_COLOR_R, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_COLOR, menu_trans),#r-color vyber moznosti
+    (State.MENU_CROSS_COLOR_R, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_COLOR_R, set_color),#r-color vyber moznosti
     (State.MENU_CROSS_COLOR_R, Fsm_Event.ENC_A_RIGHT): (State.MENU_CROSS_COLOR_G, menu_trans), #r-g
     (State.MENU_CROSS_COLOR_R, Fsm_Event.ENC_A_LEFT): (State.MENU_CROSS_COLOR_B, menu_trans), #r-b
-    (State.MENU_CROSS_COLOR_G, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_COLOR, menu_trans),#g-color vyber moznosti
+    (State.MENU_CROSS_COLOR_G, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_COLOR_G, set_color),#g-color vyber moznosti
     (State.MENU_CROSS_COLOR_G, Fsm_Event.ENC_A_RIGHT): (State.MENU_CROSS_COLOR_B, menu_trans), #g-b
     (State.MENU_CROSS_COLOR_G, Fsm_Event.ENC_A_LEFT): (State.MENU_CROSS_COLOR_R, menu_trans), #g-r
-    (State.MENU_CROSS_COLOR_B, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_COLOR, menu_trans),#b-color vyber moznosti
+    (State.MENU_CROSS_COLOR_B, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_COLOR_B, set_color),#b-color vyber moznosti
     (State.MENU_CROSS_COLOR_B, Fsm_Event.ENC_A_RIGHT): (State.MENU_CROSS_COLOR_R, menu_trans), #b-r
     (State.MENU_CROSS_COLOR_B, Fsm_Event.ENC_A_LEFT): (State.MENU_CROSS_COLOR_G, menu_trans), #b-g
     (State.MENU_CROSS_COLOR_R, Fsm_Event.MENU_BTN): (State.MENU_CROSS_COLOR, menu_trans), #r-color

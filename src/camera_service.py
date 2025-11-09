@@ -5,6 +5,7 @@ import time
 from cam_event import Cam_Event
 import numpy as np
 import cv2
+from cross_type import Cross_type
 
 class Camera_Service:
     def __init__(self):
@@ -62,6 +63,15 @@ class Camera_Service:
         self.toast = False
         self.toast_text = ''
 
+    def make_rectangle(self, frame, x, y, offset, thickness, text_width, text_height):
+
+        xr = x - offset
+        yr = y + offset
+
+        cv2.rectangle(frame, (xr, yr), (xr + offset*2 + text_width, yr - offset*2 - text_height),(211, 211, 211),-1)
+        cv2.rectangle(frame, (xr-thickness, yr+thickness), (xr + offset*2 + text_width, yr - offset*2 - text_height),0,thickness)
+
+
 
     def frame_callback(self, request):
         try:
@@ -81,8 +91,9 @@ class Camera_Service:
             r, g, b = self.ctx.cross_params.color
             color = (b,g,r)
 
-            cv2.line(frame, (cx - sz, cy), (cx + sz, cy), color, th, lineType=cv2.LINE_AA)
-            cv2.line(frame, (cx, cy - sz), (cx, cy + sz), color, th, lineType=cv2.LINE_AA)
+            if self.ctx.cross_params.type == Cross_type.CROSS:
+                cv2.line(frame, (cx - sz, cy), (cx + sz, cy), color, th, lineType=cv2.LINE_AA)
+                cv2.line(frame, (cx, cy - sz), (cx, cy + sz), color, th, lineType=cv2.LINE_AA)
 
             if self.ctx.cross_params.text_to_show:
 
@@ -104,8 +115,11 @@ class Camera_Service:
                     y = 120
                 else:
                     y = 360
+
                 
-                cv2.putText(img = frame,text = text, org = (x,y), fontFace=font, fontScale=font_scale, color=color, thickness=thickness, lineType=cv2.LINE_AA)
+                self.make_rectangle(frame, x, y, 20, 2, text_width, text_height)
+
+                cv2.putText(img = frame,text = text, org = (x,y), fontFace=font, fontScale=font_scale, color=0, thickness=thickness, lineType=cv2.LINE_AA)
 
             if self.toast and self.toast_text:
                 self.toast = False
@@ -125,9 +139,12 @@ class Camera_Service:
 
                 # Výpočet pozice pro zarovnání na střed
                 x = (frame.shape[1] - text_width) // 2
-                y = (frame.shape[0] - text_height) // 2
-                                
-                cv2.putText(img = frame,text = text, org = (x,y), fontFace=font, fontScale=font_scale, color=color, thickness=thickness, lineType=cv2.LINE_AA)
+                y = (frame.shape[0] + text_height) // 2
+
+                self.make_rectangle(frame, x, y, 30, 2, text_width, text_height)
+
+            
+                cv2.putText(img = frame,text = text, org = (x,y), fontFace=font, fontScale=font_scale, color=0, thickness=thickness, lineType=cv2.LINE_AA)
   
 
 

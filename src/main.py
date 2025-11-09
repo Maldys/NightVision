@@ -18,7 +18,7 @@ ctx = Context()
 
 
 #MENU BTN
-menu_btn = Button(5)
+menu_btn = Button(5,bounce_time=0.05)
 
 def menu_short():
     ctx.fsm_events.put(Fsm_Event.MENU_BTN)
@@ -26,7 +26,7 @@ def menu_short():
 menu_btn.when_released = menu_short
 
 #REC BTN
-rec_btn = Button(6)
+rec_btn = Button(6, bounce_time=0.05)
 
 def rec_short():
     ctx.fsm_events.put(Fsm_Event.REC_BTN)
@@ -34,7 +34,7 @@ def rec_short():
 rec_btn.when_released = rec_short
 
 #POWER BTN
-power_btn = Button(12, hold_time = 1.5)
+power_btn = Button(12, hold_time = 1.5,bounce_time=0.05)
 power_held = False
 
 def power_short():
@@ -53,7 +53,7 @@ power_btn.when_released = power_short
 power_btn.when_held = power_long
 
 #ENC_A_BTN
-enc_a_btn = Button(22)
+enc_a_btn = Button(22,bounce_time=0.05)
 
 def enc_a_short():
     ctx.fsm_events.put(Fsm_Event.ENC_A_BTN)
