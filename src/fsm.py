@@ -24,7 +24,7 @@ class FSM:
                 action(next_state, self.ctx)
         elif not key in self.transitions and event == Fsm_Event.PWR_BTN_LONG:
             self.state = State.OFF
-            self.ctx.shutdown_camera()
+            self.ctx.camera.shutdown()
             print('OFF')
             
         
