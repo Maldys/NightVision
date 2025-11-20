@@ -106,6 +106,11 @@ def set_cross_type(state, ctx: Context):
     
     setter_trans_type(state, ctx, 'CROSS TYPE SET TO ' + str_type)
 
+def clip(state, ctx: Context):
+    logger(state,ctx)
+    ctx.camera.make_clip()
+
+
 
 
 
@@ -117,8 +122,8 @@ transitions = {
     (State.OFF, Fsm_Event.PWR_BTN_LONG): (State.LIVE, cam_live), #misto (state, event): state jde udelat (state, event): (state, acition)
     (State.LIVE, Fsm_Event.MENU_BTN): (State.MENU_CROSS, menu_trans),
     ('ANY', Fsm_Event.PWR_BTN_LONG): (State.OFF, cam_off),
-    (State.LIVE, Fsm_Event.REC_BTN): (State.CLIP, test_trans),
-    (State.CLIP, Fsm_Event.REC_BTN): (State.LIVE, test_trans),
+    (State.LIVE, Fsm_Event.REC_BTN): (State.CLIP, clip),
+    (State.CLIP, None): (State.LIVE, test_trans),
     (State.LIVE, Fsm_Event.PWR_BTN_LONG): (State.OFF, cam_off),
     (State.CLIP, Fsm_Event.PWR_BTN_LONG): (State.OFF, cam_off),
     (State.MENU_CROSS, Fsm_Event.ENC_A_LEFT): (State.MENU_LANGUAGE, menu_trans),#cross-language main

@@ -6,6 +6,8 @@ from cam_event import Cam_Event
 import numpy as np
 import cv2
 from cross_type import Cross_type
+from collections import deque
+import os
 
 class Camera_Service:
     def __init__(self):
@@ -17,6 +19,12 @@ class Camera_Service:
       self.overlay_enabled = True
       self.toast = False
       self.toast_text = ""
+      self.fps = 30
+      self.clip = False
+      self.pre_buffer = None
+      self.post_buffer = None
+      self.clip_time = None
+      self.final_buffer = None
 
 
       
@@ -54,6 +62,9 @@ class Camera_Service:
         self.cmd_queue.put(Cam_Event.TOAST)
         self.toast_text = text
 
+    def make_clip(self):
+        self.cmd_queue.put(Cam_Event.CLIP)
+
 
 
 
@@ -64,13 +75,85 @@ class Camera_Service:
         self.toast_text = ''
 
     def make_rectangle(self, frame, x, y, offset, thickness, text_width, text_height):
-
         xr = x - offset
         yr = y + offset
 
         cv2.rectangle(frame, (xr, yr), (xr + offset*2 + text_width, yr - offset*2 - text_height),(211, 211, 211),-1)
         cv2.rectangle(frame, (xr-thickness, yr+thickness), (xr + offset*2 + text_width, yr - offset*2 - text_height),0,thickness)
 
+    def get_fps(self):
+        metadata = self.picam.capture_metadata()
+        frame_duration_us = metadata["FrameDuration"]
+        fps = 1_000_000 // frame_duration_us
+        self.fps = fps
+        print(fps)
+
+    def start_post(self):
+        self.clip = True
+        self.final_buffer = list(self.pre_buffer)
+        if self.post_buffer is not None:
+            self.post_buffer.clear()
+        self.clip_time = time.monotonic()
+         
+
+    def make_pre_buffer(self):
+        self.get_fps()
+        self.pre_buffer = deque(maxlen=7*self.fps)
+
+    def make_post_buffer(self):
+        self.get_fps()
+        self.post_buffer = deque(maxlen=3*self.fps)
+
+
+
+    def save_clip(self, frames):
+        if not frames:
+            print("save_clip: empty frames, nothing to save")
+            return
+
+        height, width = frames[0].shape[:2]
+
+        # kodek – rozumná volba pro MP4
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+
+        out_dir = "/boot/clips"
+        try:
+            os.makedirs(out_dir, exist_ok=True)
+        except Exception as e:
+            print("save_clip: cannot create dir", out_dir, "error:", repr(e))
+            return
+
+        timestamp = time.strftime("%Y%m%d_%H%M%S")
+        filename = f"clip_{timestamp}.mp4"
+        filepath = os.path.join(out_dir, filename)
+
+        print("save_clip: writing", filepath)
+        writer = cv2.VideoWriter(filepath, fourcc, self.fps, (width, height))
+
+        if not writer.isOpened():
+            print("save_clip: cannot open VideoWriter for", filepath)
+            return
+
+        try:
+            for f in frames:
+                writer.write(f)
+        finally:
+            writer.release()
+
+        print("save_clip: done", filepath)
+        
+
+
+
+
+
+        
+    def clear_queue(self):
+        try:
+            while True:
+                self.cmd_queue.get_nowait()
+        except Empty:
+            pass
 
 
     def frame_callback(self, request):
@@ -81,6 +164,23 @@ class Camera_Service:
             with MappedArray(request, "main") as m:
                 frame = m.array
                 h, w = frame.shape[:2] 
+            
+            if self.pre_buffer is not None:
+                self.pre_buffer.append(frame)
+
+            if self.clip and self.post_buffer is not None:
+                self.post_buffer.append(frame)
+
+            if self.clip and self.clip_time + 3.0 <= time.monotonic() and self.clip_time is not None:
+                self.clip = False
+                frames_to_save = self.final_buffer + list(self.post_buffer)
+                Thread(target=self.save_clip, args=(frames_to_save,), daemon=True).start()
+
+            
+
+
+
+
             cx = w // 2 - self.ctx.cross_params.x_offset
             cy = h // 2 - self.ctx.cross_params.y_offset
 
@@ -163,6 +263,7 @@ class Camera_Service:
     def worker(self):
         self.picam = Picamera2()
         self.picam.configure(self.picam.create_preview_configuration(main={"size": (480,480), "format": "RGB888"},  display="main"))
+        
 
         self.overlay_enabled = True
 
@@ -170,7 +271,14 @@ class Camera_Service:
 
         self.picam.start_preview(Preview.DRM, x = 0, y = 0, width = 480, height = 480) 
         self.picam.start()
+        self.picam.set_controls({"FrameRate": 30})
         self.running_event.set()
+
+        time.sleep(1)
+
+        self.make_pre_buffer()
+        self.make_post_buffer()
+        
         
         
 
@@ -208,6 +316,9 @@ class Camera_Service:
                     self.overlay_enabled = False
                 elif cmd == Cam_Event.TOAST:
                     self.toast = True
+                elif cmd == Cam_Event.CLIP:
+                    self.clip = True
+                    self.start_post()
 
                     
                     
@@ -223,9 +334,4 @@ class Camera_Service:
             self.running_event.clear()
 
 
-    def clear_queue(self):
-        try:
-            while True:
-                self.cmd_queue.get_nowait()
-        except Empty:
-            pass
+    
