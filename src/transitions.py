@@ -3,6 +3,7 @@ from fsm_event import Fsm_Event
 from context import Context
 from fsm_event import Fsm_Event
 from threading import Thread
+from cross_type import Cross_type
 
 
 
@@ -34,7 +35,20 @@ def off_menu_trans(state, ctx: Context):
     text = ''
     ctx.cross_params.text_to_show = text
 
-def setter_trans(state, ctx: Context, toast_text: str):
+def setter_trans_clr(state, ctx: Context, toast_text: str):
+    logger(state,ctx)
+    ctx.camera.show_toast(toast_text)
+    text = str(state).replace('State.', "")
+    ctx.cross_params.text_to_show = text
+
+def setter_trans_xy(state, ctx: Context):
+    logger(state,ctx)
+    ctx.camera.show_toast('X, Y [' + str(ctx.cross_params.x_offset) + ', ' + str(ctx.cross_params.y_offset) + ']')
+    text = str(state).replace('State.', "")
+    ctx.cross_params.text_to_show = text
+
+def setter_trans_type(state, ctx: Context, toast_text: str):
+    logger(state,ctx)
     ctx.camera.show_toast(toast_text)
     text = str(state).replace('State.', "")
     ctx.cross_params.text_to_show = text
@@ -53,27 +67,44 @@ def set_color(state, ctx: Context):
         ctx.cross_params.color = (0, 0, 255)
         color_str = 'BLUE'
     
-    setter_trans(state, ctx, color_str + ' COLOR SET')
+    setter_trans_clr(state, ctx, color_str + ' COLOR SET')
 
 def set_xy_plus(state, ctx: Context):
-    if state == State.MENU_CROSS_X:
+    if state == State.MENU_CROSS_X_SET:
         x = ctx.cross_params.x_offset
-        x = x+1
+        if x < 100:
+            x = x+1
         ctx.cross_params.x_offset = x
-    elif state == State.MENU_CROSS_Y:
+    elif state == State.MENU_CROSS_Y_SET:
         y = ctx.cross_params.y_offset
-        y =y+1
+        if y < 100:
+            y = y+1
         ctx.cross_params.y_offset = y
 
 def set_xy_minus(state, ctx: Context):
-    if state == State.MENU_CROSS_X:
+    if state == State.MENU_CROSS_X_SET:
         x = ctx.cross_params.x_offset
-        x = x-1
+        if x > -100:
+            x = x-1
         ctx.cross_params.x_offset = x
-    elif state == State.MENU_CROSS_Y:
+    elif state == State.MENU_CROSS_Y_SET:
         y = ctx.cross_params.y_offset
-        y = y-1
+        if y > -100:
+            y = y-1
         ctx.cross_params.y_offset = y   
+
+def set_cross_type(state, ctx: Context):
+    if state == State.MENU_CROSS_TYPE_CROSS:
+        ctx.cross_params.cross_type = Cross_type.CROSS
+        str_type = 'CROSS'
+    elif state == State.MENU_CROSS_TYPE_DOT:
+        ctx.cross_params.cross_type = Cross_type.DOT
+        str_type = 'DOT'
+    elif state == State.MENU_CROSS_TYPE_HALO:
+        ctx.cross_params.cross_type = Cross_type.HALO
+        str_type = 'HALO'
+    
+    setter_trans_type(state, ctx, 'CROSS TYPE SET TO ' + str_type)
 
 
 
@@ -110,20 +141,23 @@ transitions = {
     (State.MENU_CROSS_COLOR_G, Fsm_Event.MENU_BTN): (State.MENU_CROSS_COLOR, menu_trans), #g-color
     (State.MENU_CROSS_COLOR_B, Fsm_Event.MENU_BTN): (State.MENU_CROSS_COLOR, menu_trans), #b-color
     (State.MENU_CROSS_TYPE, Fsm_Event.ENC_A_LEFT): (State.MENU_CROSS_COLOR, menu_trans),#type-color
-    (State.MENU_CROSS_X, Fsm_Event.ENC_A_RIGHT): (State.MENU_CROSS_Y, set_xy_plus),#x-y
+    (State.MENU_CROSS_X, Fsm_Event.ENC_A_RIGHT): (State.MENU_CROSS_Y, menu_trans),#x-y
     (State.MENU_CROSS_TYPE, Fsm_Event.ENC_A_RIGHT): (State.MENU_CROSS_X, menu_trans),#type-x
-    (State.MENU_CROSS_X, Fsm_Event.ENC_A_LEFT): (State.MENU_CROSS_TYPE, set_xy_minus),#x-type
+    (State.MENU_CROSS_X, Fsm_Event.ENC_A_LEFT): (State.MENU_CROSS_TYPE, menu_trans),#x-type
     (State.MENU_CROSS_TYPE, Fsm_Event.MENU_BTN): (State.MENU_CROSS, menu_trans),#type-cross
     (State.MENU_CROSS_TYPE, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_TYPE_CROSS, menu_trans),#type/cross
-    (State.MENU_CROSS_TYPE_CROSS, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_TYPE, menu_trans),#cross-type vyber moznosti
+    (State.MENU_CROSS_TYPE_CROSS, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_TYPE_CROSS, set_cross_type),#cross vyber moznosti
     (State.MENU_CROSS_TYPE_CROSS, Fsm_Event.ENC_A_RIGHT): (State.MENU_CROSS_TYPE_DOT, menu_trans), #cross-dot
     (State.MENU_CROSS_TYPE_CROSS, Fsm_Event.ENC_A_LEFT): (State.MENU_CROSS_TYPE_HALO, menu_trans), #cross-halo
-    (State.MENU_CROSS_TYPE_DOT, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_TYPE, menu_trans),#dot-type vyber moznosti
+    (State.MENU_CROSS_TYPE_CROSS, Fsm_Event.MENU_BTN): (State.MENU_CROSS_TYPE, menu_trans),#cross-menu
+    (State.MENU_CROSS_TYPE_DOT, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_TYPE_DOT, set_cross_type),#dot vyber moznosti
     (State.MENU_CROSS_TYPE_DOT, Fsm_Event.ENC_A_RIGHT): (State.MENU_CROSS_TYPE_HALO, menu_trans), #dot-halo
     (State.MENU_CROSS_TYPE_DOT, Fsm_Event.ENC_A_LEFT): (State.MENU_CROSS_TYPE_CROSS, menu_trans), #dot-cross
-    (State.MENU_CROSS_TYPE_HALO, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_TYPE, menu_trans),#dot-type vyber moznosti
+    (State.MENU_CROSS_TYPE_DOT, Fsm_Event.MENU_BTN): (State.MENU_CROSS_TYPE, menu_trans),#dot-type
+    (State.MENU_CROSS_TYPE_HALO, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_TYPE_HALO, set_cross_type),#dot vyber moznosti
     (State.MENU_CROSS_TYPE_HALO, Fsm_Event.ENC_A_RIGHT): (State.MENU_CROSS_TYPE_CROSS, menu_trans), #halo-cross
     (State.MENU_CROSS_TYPE_HALO, Fsm_Event.ENC_A_LEFT): (State.MENU_CROSS_TYPE_DOT, menu_trans), #halo-dot
+    (State.MENU_CROSS_TYPE_HALO, Fsm_Event.MENU_BTN): (State.MENU_CROSS_TYPE, menu_trans),#halo-type
     (State.MENU_CROSS_COLOR, Fsm_Event.MENU_BTN): (State.MENU_CROSS, menu_trans),#color-cross
     (State.MENU_CROSS_Y, Fsm_Event.MENU_BTN): (State.MENU_CROSS, menu_trans),#y-cross
     (State.MENU_CROSS_Y, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_Y_SET, menu_trans),#y-y vyber moznosti
@@ -132,12 +166,12 @@ transitions = {
     (State.MENU_CROSS_X, Fsm_Event.MENU_BTN): (State.MENU_CROSS, menu_trans),#x-cross
     (State.MENU_CROSS_X_SET, Fsm_Event.ENC_A_RIGHT): (State.MENU_CROSS_X_SET, set_xy_plus),
     (State.MENU_CROSS_X_SET, Fsm_Event.ENC_A_LEFT): (State.MENU_CROSS_X_SET, set_xy_minus),
-    (State.MENU_CROSS_X_SET, Fsm_Event.MENU_BTN): (State.MENU_CROSS_X, menu_trans),
-    (State.MENU_CROSS_X_SET, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_X, menu_trans),
+    (State.MENU_CROSS_X_SET, Fsm_Event.MENU_BTN): (State.MENU_CROSS_X, setter_trans_xy),
+    (State.MENU_CROSS_X_SET, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_X, setter_trans_xy),
     (State.MENU_CROSS_Y_SET, Fsm_Event.ENC_A_RIGHT): (State.MENU_CROSS_Y_SET, set_xy_plus),
     (State.MENU_CROSS_Y_SET, Fsm_Event.ENC_A_LEFT): (State.MENU_CROSS_Y_SET, set_xy_minus),
-    (State.MENU_CROSS_Y_SET, Fsm_Event.MENU_BTN): (State.MENU_CROSS_Y, menu_trans),
-    (State.MENU_CROSS_Y_SET, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_Y, menu_trans),
+    (State.MENU_CROSS_Y_SET, Fsm_Event.MENU_BTN): (State.MENU_CROSS_Y, setter_trans_xy),
+    (State.MENU_CROSS_Y_SET, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_Y, setter_trans_xy),
     (State.MENU_VIEW_MODE, Fsm_Event.ENC_A_LEFT): (State.MENU_CROSS, menu_trans),#view_mode-cross main
     (State.MENU_VIEW_MODE, Fsm_Event.ENC_A_RIGHT): (State.MENU_VIDEO, menu_trans),#view_mode-video main
     (State.MENU_VIEW_MODE, Fsm_Event.ENC_A_BTN): (State.MENU_VIEW_MODE_DAY, menu_trans),#view_mode/day

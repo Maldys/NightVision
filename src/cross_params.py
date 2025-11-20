@@ -3,7 +3,7 @@ from cross_type import Cross_type
 
 @dataclass
 class Crosshair_params:
-    type: Cross_type = Cross_type.CROSS
+    cross_type: Cross_type = Cross_type.DOT
     color: tuple = (255, 0, 0) #(R,G,B)
     thickness: int = 2
     size: int = 40

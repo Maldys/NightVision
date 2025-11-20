@@ -12,13 +12,14 @@ from threading import Thread
 
 
 
+
 ctx = Context()
       
     
 
 
 #MENU BTN
-menu_btn = Button(5,bounce_time=0.05)
+menu_btn = Button(12,bounce_time=0.05)
 
 def menu_short():
     ctx.fsm_events.put(Fsm_Event.MENU_BTN)
@@ -34,7 +35,7 @@ def rec_short():
 rec_btn.when_released = rec_short
 
 #POWER BTN
-power_btn = Button(12, hold_time = 1.5,bounce_time=0.05)
+power_btn = Button(5, hold_time = 1.5,bounce_time=0.05)
 power_held = False
 
 def power_short():

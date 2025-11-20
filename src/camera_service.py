@@ -91,9 +91,14 @@ class Camera_Service:
             r, g, b = self.ctx.cross_params.color
             color = (b,g,r)
 
-            if self.ctx.cross_params.type == Cross_type.CROSS:
+            if self.ctx.cross_params.cross_type == Cross_type.CROSS:
                 cv2.line(frame, (cx - sz, cy), (cx + sz, cy), color, th, lineType=cv2.LINE_AA)
                 cv2.line(frame, (cx, cy - sz), (cx, cy + sz), color, th, lineType=cv2.LINE_AA)
+            elif self.ctx.cross_params.cross_type == Cross_type.HALO:
+                cv2.circle(frame, (cx, cy), 5, color, thickness=-1)
+                cv2.circle(frame, (cx, cy), 40, color, th)
+            elif self.ctx.cross_params.cross_type == Cross_type.DOT:
+                cv2.circle(frame, (cx, cy), 10, color, thickness=-1)
 
             if self.ctx.cross_params.text_to_show:
 
