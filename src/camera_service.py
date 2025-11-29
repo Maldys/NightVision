@@ -104,45 +104,95 @@ class Camera_Service:
         self.get_fps()
         self.post_buffer = deque(maxlen=3*self.fps)
 
-
-
-    def save_clip(self, frames):
+    def save_clip_thread(self, frames):
         if not frames:
-            print("save_clip: empty frames, nothing to save")
+            print("save_clip_thread: empty frames, nothing to save")
             return
 
-        height, width = frames[0].shape[:2]
-
-        # kodek – rozumná volba pro MP4
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-
-        out_dir = "/boot/clips"
-        try:
-            os.makedirs(out_dir, exist_ok=True)
-        except Exception as e:
-            print("save_clip: cannot create dir", out_dir, "error:", repr(e))
+        first = frames[0]
+        if first is None or not hasattr(first, "shape"):
+            print("save_clip_thread: invalid first frame:", type(first))
             return
 
+        height, width = first.shape[:2]
+        fps = float(self.fps)
+
+        out_dir = "/mnt/p3/clips"   # podle tebe existuje
         timestamp = time.strftime("%Y%m%d_%H%M%S")
         filename = f"clip_{timestamp}.mp4"
         filepath = os.path.join(out_dir, filename)
 
-        print("save_clip: writing", filepath)
-        writer = cv2.VideoWriter(filepath, fourcc, self.fps, (width, height))
+        cmd = [
+            "ffmpeg",
+            "-y",
+            "-f", "rawvideo",
+            "-vcodec", "rawvideo",
+            "-pix_fmt", "bgr24",
+            "-s", f"{width}x{height}",
+            "-r", str(fps),
+            "-i", "-",
+            "-an",
+            "-c:v", "libx264",        # nebo "h264_v4l2m2m" pokud HW enkodér bude fungovat
+            "-preset", "veryfast",
+            "-pix_fmt", "yuv420p",
+            filepath,
+        ]
 
-        if not writer.isOpened():
-            print("save_clip: cannot open VideoWriter for", filepath)
-            return
+        print(
+            "save_clip_thread: running:",
+            " ".join(cmd),
+            f"(frames={len(frames)}, fps={fps}, size={width}x{height})"
+        )
+
+        proc = subprocess.Popen(
+            cmd,
+            stdin=subprocess.PIPE,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,   # pro debug můžeš dát None
+        )
 
         try:
             for f in frames:
-                writer.write(f)
+                if f is None:
+                    continue
+                buf = np.asarray(f, dtype=np.uint8).tobytes()
+                proc.stdin.write(buf)
+        except Exception as e:
+            print("save_clip_thread: error while writing frames:", repr(e))
         finally:
-            writer.release()
+            try:
+                proc.stdin.close()
+            except Exception:
+                pass
+            ret = proc.wait()
 
-        print("save_clip: done", filepath)
-        
+        if ret != 0:
+            print("save_clip_thread: ffmpeg exited with code", ret)
+        else:
+            print("save_clip_thread: done", filepath)
 
+    def save_clip(self, frames):
+
+        if not frames:
+            print("save_clip: empty frames, nothing to save")
+            return
+
+        try:
+            frames_copy = [f.copy() for f in frames if f is not None]
+        except Exception as e:
+            print("save_clip: cannot copy frames:", repr(e))
+            return
+
+    
+        t = threading.Thread(
+            target=self._save_clip_thread,
+            args=(frames_copy,),
+            daemon=True
+        )
+        t.start()
+
+        print(f"save_clip: started background save, frames={len(frames_copy)}")
+    
 
 
 
