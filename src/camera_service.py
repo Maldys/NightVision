@@ -356,6 +356,7 @@ class Camera_Service:
                             pass
                         try: 
                             self.picam.stop()
+                            self.picam2.close()
                         except Exception: 
                             pass
                         self.running_event.clear()
