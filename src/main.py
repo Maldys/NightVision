@@ -9,37 +9,7 @@ from transitions import transitions
 from state import State
 from context import Context
 from threading import Thread
-import subprocess
-import os
-
-
-def kill_other_instances():
-    this_pid = os.getpid()
-
-    try:
-        output = subprocess.check_output(["pgrep", "-f", "main.py"]).decode().strip()
-        pids = output.split("\n")
-
-        for pid in pids:
-            pid = pid.strip()
-            if not pid.isdigit():
-                continue
-
-            pid = int(pid)
-
-            if pid == this_pid:
-                continue
-
-            try:
-                os.kill(pid, 9)
-                print(f"Killed old instance PID {pid}")
-            except ProcessLookupError:
-                pass
-
-    except subprocess.CalledProcessError:
-        pass
-
-
+from reset import kill_other_instances
 
 kill_other_instances()
 ctx = Context()
@@ -47,7 +17,7 @@ ctx = Context()
 
 
 #MENU BTN
-menu_btn = Button(12,bounce_time=0.05)
+menu_btn = Button(25,bounce_time=0.05)
 
 def menu_short():
     ctx.fsm_events.put(Fsm_Event.MENU_BTN)

@@ -4,6 +4,7 @@ from context import Context
 from fsm_event import Fsm_Event
 from threading import Thread
 from cross_type import Cross_type
+from reset import kill_other_instances
 
 
 
@@ -16,6 +17,7 @@ def test_trans(state, ctx: Context):
 
 
 def cam_live(state, ctx: Context):
+    kill_other_instances()
     logger(state,ctx)
     ctx.camera.live()
         
