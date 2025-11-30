@@ -3,11 +3,7 @@ import os
 import psutil
 
 def kill_other_instances():
-    """
-    Zajistí, že běží jen jedna instance tohoto skriptu.
-    Pokud kill_others=True, ostatní instance zabije.
-    Pokud False, jen se ukončí, když jiná instance běží.
-    """
+    
     this_pid = os.getpid()
     this_script = os.path.abspath(__file__)
 

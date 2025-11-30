@@ -6,8 +6,7 @@ from cam_event import Cam_Event
 import numpy as np
 import cv2
 from cross_type import Cross_type
-from collections import deque
-import os
+from clip_recorder import ClipRecorder
 
 class Camera_Service:
     def __init__(self):
@@ -19,12 +18,8 @@ class Camera_Service:
       self.overlay_enabled = True
       self.toast = False
       self.toast_text = ""
-      self.fps = 30
-      self.clip = False
-      self.pre_buffer = None
-      self.post_buffer = None
-      self.clip_time = None
-      self.final_buffer = None
+      self.fps = 20
+      self.clip_recorder = None
 
 
       
@@ -77,7 +72,6 @@ class Camera_Service:
     def make_rectangle(self, frame, x, y, offset, thickness, text_width, text_height):
         xr = x - offset
         yr = y + offset
-
         cv2.rectangle(frame, (xr, yr), (xr + offset*2 + text_width, yr - offset*2 - text_height),(211, 211, 211),-1)
         cv2.rectangle(frame, (xr-thickness, yr+thickness), (xr + offset*2 + text_width, yr - offset*2 - text_height),0,thickness)
 
@@ -87,113 +81,6 @@ class Camera_Service:
         fps = 1_000_000 // frame_duration_us
         self.fps = fps
         print(fps)
-
-    def start_post(self):
-        self.clip = True
-        self.final_buffer = list(self.pre_buffer)
-        if self.post_buffer is not None:
-            self.post_buffer.clear()
-        self.clip_time = time.monotonic()
-         
-
-    def make_pre_buffer(self):
-        self.get_fps()
-        self.pre_buffer = deque(maxlen=7*self.fps)
-
-    def make_post_buffer(self):
-        self.get_fps()
-        self.post_buffer = deque(maxlen=3*self.fps)
-
-    def save_clip_thread(self, frames):
-        if not frames:
-            print("save_clip_thread: empty frames, nothing to save")
-            return
-
-        first = frames[0]
-        if first is None or not hasattr(first, "shape"):
-            print("save_clip_thread: invalid first frame:", type(first))
-            return
-
-        height, width = first.shape[:2]
-        fps = float(self.fps)
-
-        out_dir = "/mnt/p3/clips"   # podle tebe existuje
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        filename = f"clip_{timestamp}.mp4"
-        filepath = os.path.join(out_dir, filename)
-
-        cmd = [
-            "ffmpeg",
-            "-y",
-            "-f", "rawvideo",
-            "-vcodec", "rawvideo",
-            "-pix_fmt", "bgr24",
-            "-s", f"{width}x{height}",
-            "-r", str(fps),
-            "-i", "-",
-            "-an",
-            "-c:v", "libx264",        # nebo "h264_v4l2m2m" pokud HW enkodér bude fungovat
-            "-preset", "veryfast",
-            "-pix_fmt", "yuv420p",
-            filepath,
-        ]
-
-        print(
-            "save_clip_thread: running:",
-            " ".join(cmd),
-            f"(frames={len(frames)}, fps={fps}, size={width}x{height})"
-        )
-
-        proc = subprocess.Popen(
-            cmd,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,   # pro debug můžeš dát None
-        )
-
-        try:
-            for f in frames:
-                if f is None:
-                    continue
-                buf = np.asarray(f, dtype=np.uint8).tobytes()
-                proc.stdin.write(buf)
-        except Exception as e:
-            print("save_clip_thread: error while writing frames:", repr(e))
-        finally:
-            try:
-                proc.stdin.close()
-            except Exception:
-                pass
-            ret = proc.wait()
-
-        if ret != 0:
-            print("save_clip_thread: ffmpeg exited with code", ret)
-        else:
-            print("save_clip_thread: done", filepath)
-
-    def save_clip(self, frames):
-
-        if not frames:
-            print("save_clip: empty frames, nothing to save")
-            return
-
-        try:
-            frames_copy = [f.copy() for f in frames if f is not None]
-        except Exception as e:
-            print("save_clip: cannot copy frames:", repr(e))
-            return
-
-    
-        t = threading.Thread(
-            target=self._save_clip_thread,
-            args=(frames_copy,),
-            daemon=True
-        )
-        t.start()
-
-        print(f"save_clip: started background save, frames={len(frames_copy)}")
-    
-
 
 
 
@@ -214,19 +101,7 @@ class Camera_Service:
             with MappedArray(request, "main") as m:
                 frame = m.array
                 h, w = frame.shape[:2] 
-            
-            if self.pre_buffer is not None:
-                self.pre_buffer.append(frame)
-
-            if self.clip and self.post_buffer is not None:
-                self.post_buffer.append(frame)
-
-            if self.clip and self.clip_time + 3.0 <= time.monotonic() and self.clip_time is not None:
-                self.clip = False
-                frames_to_save = self.final_buffer + list(self.post_buffer)
-                Thread(target=self.save_clip, args=(frames_to_save,), daemon=True).start()
-
-            
+                      
 
 
 
@@ -302,10 +177,6 @@ class Camera_Service:
                 cv2.putText(img = frame,text = text, org = (x,y), fontFace=font, fontScale=font_scale, color=0, thickness=thickness, lineType=cv2.LINE_AA)
   
 
-
-            
-            
-
         except Exception as e:
             print("frame_callback error:", repr(e))
         
@@ -313,7 +184,6 @@ class Camera_Service:
     def worker(self):
         self.picam = Picamera2()
         self.picam.configure(self.picam.create_preview_configuration(main={"size": (480,480), "format": "RGB888"},  display="main"))
-        
 
         self.overlay_enabled = True
 
@@ -321,16 +191,11 @@ class Camera_Service:
 
         self.picam.start_preview(Preview.DRM, x = 0, y = 0, width = 480, height = 480) 
         self.picam.start()
-        self.picam.set_controls({"FrameRate": 30})
         self.running_event.set()
+        self.picam.set_controls({"FrameRate": self.fps})
+        self.clip_recorder = ClipRecorder(self.picam, pre_ms=7000, post_ms=3000)
 
         time.sleep(1)
-
-        self.make_pre_buffer()
-        self.make_post_buffer()
-        
-        
-        
 
         alive = True
   
@@ -356,7 +221,7 @@ class Camera_Service:
                             pass
                         try: 
                             self.picam.stop()
-                            self.picam2.close()
+                            self.picam.close()
                         except Exception: 
                             pass
                         self.running_event.clear()
@@ -368,14 +233,15 @@ class Camera_Service:
                 elif cmd == Cam_Event.TOAST:
                     self.toast = True
                 elif cmd == Cam_Event.CLIP:
-                    self.clip = True
-                    self.start_post()
+                    self.clip_recorder.request_clip()
 
                     
                     
         finally:
             if self.picam:
                     try: self.picam.stop_preview()
+                    except Exception: pass
+                    try: self.clip_recorder.stop()
                     except Exception: pass
                     try: self.picam.stop()
                     except Exception: pass
