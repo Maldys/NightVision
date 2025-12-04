@@ -124,10 +124,7 @@ transitions = {
     (State.OFF, Fsm_Event.PWR_BTN_LONG): (State.LIVE, cam_live), #misto (state, event): state jde udelat (state, event): (state, acition)
     (State.LIVE, Fsm_Event.MENU_BTN): (State.MENU_CROSS, menu_trans),
     ('ANY', Fsm_Event.PWR_BTN_LONG): (State.OFF, cam_off),
-    (State.LIVE, Fsm_Event.REC_BTN): (State.CLIP, clip),
-    (State.CLIP, None): (State.LIVE, test_trans),
-    (State.LIVE, Fsm_Event.PWR_BTN_LONG): (State.OFF, cam_off),
-    (State.CLIP, Fsm_Event.PWR_BTN_LONG): (State.OFF, cam_off),
+    (State.LIVE, Fsm_Event.REC_BTN): (State.LIVE, clip),
     (State.MENU_CROSS, Fsm_Event.ENC_A_LEFT): (State.MENU_LANGUAGE, menu_trans),#cross-language main
     (State.MENU_CROSS, Fsm_Event.ENC_A_RIGHT): (State.MENU_VIEW_MODE, menu_trans),#cross-view_mode main
     (State.MENU_CROSS, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_COLOR, menu_trans),#cross/color
