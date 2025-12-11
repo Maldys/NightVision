@@ -30,80 +30,80 @@ def cam_off(state, ctx: Context):
 def menu_trans(state, ctx: Context):
     logger(state,ctx)
     text = str(state).replace('State.', "")
-    ctx.cross_params.text_to_show = text
+    ctx.text_to_show = text
 
 def off_menu_trans(state, ctx: Context):
     logger(state,ctx)
     text = ''
-    ctx.cross_params.text_to_show = text
+    ctx.text_to_show = text
 
 def setter_trans_clr(state, ctx: Context, toast_text: str):
     logger(state,ctx)
     ctx.camera.show_toast(toast_text)
     text = str(state).replace('State.', "")
-    ctx.cross_params.text_to_show = text
+    ctx.text_to_show = text
 
 def setter_trans_xy(state, ctx: Context):
     logger(state,ctx)
-    ctx.camera.show_toast('X, Y [' + str(ctx.cross_params.x_offset) + ', ' + str(ctx.cross_params.y_offset) + ']')
+    ctx.camera.show_toast('X, Y [' + str(ctx.cross_params[ctx.sel_cross].x_offset) + ', ' + str(ctx.cross_params[ctx.sel_cross].y_offset) + ']')
     text = str(state).replace('State.', "")
-    ctx.cross_params.text_to_show = text
+    ctx.text_to_show = text
 
 def setter_trans_type(state, ctx: Context, toast_text: str):
     logger(state,ctx)
     ctx.camera.show_toast(toast_text)
     text = str(state).replace('State.', "")
-    ctx.cross_params.text_to_show = text
+    ctx.text_to_show = text
 
 
 #obsluzne funkce (set xy, set color etc.)
 
 def set_color(state, ctx: Context):
     if state == State.MENU_CROSS_COLOR_R:
-        ctx.cross_params.color = (255, 0, 0)
+        ctx.cross_params[ctx.sel_cross].color = (255, 0, 0)
         color_str = 'RED'
     elif state == State.MENU_CROSS_COLOR_G:
-        ctx.cross_params.color = (0, 255, 0)
+        ctx.cross_params[ctx.sel_cross].color = (0, 255, 0)
         color_str = 'GREEN'
     elif state == State.MENU_CROSS_COLOR_B:
-        ctx.cross_params.color = (0, 0, 255)
+        ctx.cross_params[ctx.sel_cross].color = (0, 0, 255)
         color_str = 'BLUE'
     
     setter_trans_clr(state, ctx, color_str + ' COLOR SET')
 
 def set_xy_plus(state, ctx: Context):
     if state == State.MENU_CROSS_X_SET:
-        x = ctx.cross_params.x_offset
+        x = ctx.cross_params[ctx.sel_cross].x_offset
         if x < 100:
             x = x+1
-        ctx.cross_params.x_offset = x
+        ctx.cross_params[ctx.sel_cross].x_offset = x
     elif state == State.MENU_CROSS_Y_SET:
-        y = ctx.cross_params.y_offset
+        y = ctx.cross_params[ctx.sel_cross].y_offset
         if y < 100:
             y = y+1
-        ctx.cross_params.y_offset = y
+        ctx.cross_params[ctx.sel_cross].y_offset = y
 
 def set_xy_minus(state, ctx: Context):
     if state == State.MENU_CROSS_X_SET:
-        x = ctx.cross_params.x_offset
+        x = ctx.cross_params[ctx.sel_cross].x_offset
         if x > -100:
             x = x-1
-        ctx.cross_params.x_offset = x
+        ctx.cross_params[ctx.sel_cross].x_offset = x
     elif state == State.MENU_CROSS_Y_SET:
-        y = ctx.cross_params.y_offset
+        y = ctx.cross_params[ctx.sel_cross].y_offset
         if y > -100:
             y = y-1
-        ctx.cross_params.y_offset = y   
+        ctx.cross_params[ctx.sel_cross].y_offset = y   
 
 def set_cross_type(state, ctx: Context):
     if state == State.MENU_CROSS_TYPE_CROSS:
-        ctx.cross_params.cross_type = Cross_type.CROSS
+        ctx.cross_params[ctx.sel_cross].cross_type = Cross_type.CROSS
         str_type = 'CROSS'
     elif state == State.MENU_CROSS_TYPE_DOT:
-        ctx.cross_params.cross_type = Cross_type.DOT
+        ctx.cross_params[ctx.sel_cross].cross_type = Cross_type.DOT
         str_type = 'DOT'
     elif state == State.MENU_CROSS_TYPE_HALO:
-        ctx.cross_params.cross_type = Cross_type.HALO
+        ctx.cross_params[ctx.sel_cross].cross_type = Cross_type.HALO
         str_type = 'HALO'
     
     setter_trans_type(state, ctx, 'CROSS TYPE SET TO ' + str_type)

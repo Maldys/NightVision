@@ -9,5 +9,4 @@ class Crosshair_params:
     size: int = 40
     x_offset: int = 0
     y_offset: int = 0
-    text_to_show: str = ''
     scale: int = 1

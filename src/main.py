@@ -13,14 +13,17 @@ from reset import kill_other_instances
 
 kill_other_instances()
 ctx = Context()
-      
 
+ctx.context_saver.ctx_from_config()
+
+      
 
 #MENU BTN
 menu_btn = Button(25,bounce_time=0.05)
 
 def menu_short():
     ctx.fsm_events.put(Fsm_Event.MENU_BTN)
+
 
 menu_btn.when_released = menu_short
 

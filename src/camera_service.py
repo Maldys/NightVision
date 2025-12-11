@@ -6,7 +6,7 @@ from cam_event import Cam_Event
 import numpy as np
 import cv2
 from cross_type import Cross_type
-from clip_recorder import ClipRecorder
+from clip_recorder import ClipRecorderRing
 
 
 class Camera_Service:
@@ -57,7 +57,7 @@ class Camera_Service:
 
     def make_clip(self):
         self.cmd_queue.put(Cam_Event.CLIP)
-        print("[Camera_Service] make_clip() called")
+
     
 
     # vnitrni metody
@@ -106,27 +106,27 @@ class Camera_Service:
                 frame = m.array
                 h, w = frame.shape[:2]
 
-            cx = w // 2 - self.ctx.cross_params.x_offset
-            cy = h // 2 - self.ctx.cross_params.y_offset
+            cx = w // 2 - self.ctx.cross_params[self.ctx.sel_cross].x_offset
+            cy = h // 2 - self.ctx.cross_params[self.ctx.sel_cross].y_offset
 
-            sz = self.ctx.cross_params.size  # size
-            th = self.ctx.cross_params.thickness  # line thickness
+            sz = self.ctx.cross_params[self.ctx.sel_cross].size  # size
+            th = self.ctx.cross_params[self.ctx.sel_cross].thickness  # line thickness
 
-            r, g, b = self.ctx.cross_params.color
+            r, g, b = self.ctx.cross_params[self.ctx.sel_cross].color
             color = (b, g, r)
 
-            if self.ctx.cross_params.cross_type == Cross_type.CROSS:
+            if self.ctx.cross_params[self.ctx.sel_cross].cross_type == Cross_type.CROSS:
                 cv2.line(frame, (cx - sz, cy), (cx + sz, cy), color, th, lineType=cv2.LINE_AA)
                 cv2.line(frame, (cx, cy - sz), (cx, cy + sz), color, th, lineType=cv2.LINE_AA)
-            elif self.ctx.cross_params.cross_type == Cross_type.HALO:
+            elif self.ctx.cross_params[self.ctx.sel_cross].cross_type == Cross_type.HALO:
                 cv2.circle(frame, (cx, cy), 5, color, thickness=-1)
                 cv2.circle(frame, (cx, cy), 40, color, th)
-            elif self.ctx.cross_params.cross_type == Cross_type.DOT:
+            elif self.ctx.cross_params[self.ctx.sel_cross].cross_type == Cross_type.DOT:
                 cv2.circle(frame, (cx, cy), 10, color, thickness=-1)
 
-            if self.ctx.cross_params.text_to_show:
+            if self.ctx.text_to_show:
 
-                text = self.ctx.cross_params.text_to_show
+                text = self.ctx.text_to_show
                 font = cv2.FONT_HERSHEY_SIMPLEX
                 font_scale = 0.8
                 thickness = 2
@@ -139,7 +139,7 @@ class Camera_Service:
                 # Výpočet pozice pro zarovnání na střed
                 x = (frame.shape[1] - text_width) // 2
 
-                y_cross_offset = self.ctx.cross_params.y_offset
+                y_cross_offset = self.ctx.cross_params[self.ctx.sel_cross].y_offset
 
                 if y_cross_offset <= 0:
                     y = 120
@@ -196,9 +196,10 @@ class Camera_Service:
     def worker(self):
         self.picam = Picamera2()
         config = self.picam.create_video_configuration(
-            main={"format": "YUV420", "size": (640, 480)},
-            display="main",  # preview bude používat main stream
-            encode="main",
+            main={"format": "RGB888", "size": (640, 640)},
+            lores={"format": "YUV420", "size": (640, 480)},
+            encode="lores",
+            display="main"
         )
         self.picam.configure(config)
 
@@ -210,14 +211,12 @@ class Camera_Service:
         self.picam.start()
         self.running_event.set()
         self.picam.set_controls({"FrameRate": self.fps})
-        from clip_recorder import ClipRecorder
-        self.clip_recorder = ClipRecorder(
-            self.picam,
-            pre_ms=7000,
-            post_ms=3000,
-            bitrate=5_000_000,
-            fps=self.fps,
-        )
+        self.clip_recorder = ClipRecorderRing(
+        self.picam,
+        seconds=10,
+        bitrate=5_000_000,
+        fps=self.fps,
+    )
         self.clip_recorder.start()
 
         time.sleep(1)
