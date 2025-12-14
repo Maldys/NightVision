@@ -5,6 +5,7 @@ from fsm_event import Fsm_Event
 from threading import Thread
 from cross_type import Cross_type
 from reset import kill_other_instances
+from mode import Mode
 
 
 
@@ -14,6 +15,12 @@ def logger(state, ctx: Context):
 
 def test_trans(state, ctx: Context):
     logger(state,ctx)
+
+def save_ctx_trans(state, ctx: Context):
+    logger(state, ctx)
+    off_menu_trans(state, ctx)
+    ctx.context_saver.save_ctx()
+
 
 
 def cam_live(state, ctx: Context):
@@ -51,6 +58,8 @@ def setter_trans_xy(state, ctx: Context):
 def setter_trans_type(state, ctx: Context, toast_text: str):
     menu_trans(state, ctx)
     ctx.camera.show_toast(toast_text)
+
+
 
 
 
@@ -115,7 +124,17 @@ def select_config(state, ctx: Context):
     num = state.name[len(state.name)-1]
     config_to_select = int(num)
     ctx.sel_cross = config_to_select
-    ctx.camera.show_toast(f'SELECTED CONFIG: {condfig_to_select}')
+    ctx.camera.show_toast(f'SELECTED CONFIG: {config_to_select}')
+
+def switch_mode(state, ctx: Context):
+    menu_trans(state, ctx)
+    if ctx.mode == Mode.DAY:
+        sw_mode = Mode.NIGHT
+    else:
+        sw_mode = Mode.DAY
+    ctx.mode = sw_mode
+    ctx.camera.change_mode()
+    ctx.camera.show_toast(f"{sw_mode.name} SELECTED")
     
 
 
@@ -183,20 +202,16 @@ transitions = {
     (State.MENU_VIEW_MODE, Fsm_Event.ENC_A_RIGHT): (State.MENU_SELECT_CONFIG, menu_trans),#view_mode-video main
     (State.MENU_VIEW_MODE, Fsm_Event.ENC_A_BTN): (State.MENU_VIEW_MODE_DAY, menu_trans),#view_mode/day
     (State.MENU_VIEW_MODE_DAY, Fsm_Event.MENU_BTN): (State.MENU_VIEW_MODE, menu_trans),#day-view_mode
-    (State.MENU_VIEW_MODE_DAY, Fsm_Event.ENC_A_BTN): (State.MENU_VIEW_MODE_DAY, menu_trans),#day-day vyber moznosti
-    (State.MENU_VIEW_MODE_DAY, Fsm_Event.ENC_A_RIGHT): (State.MENU_VIEW_MODE_NIGHT_GRN, menu_trans),#day-grn_night
-    (State.MENU_VIEW_MODE_DAY, Fsm_Event.ENC_A_LEFT): (State.MENU_VIEW_MODE_NIGHT_GREY, menu_trans),#day-grey_night
-    (State.MENU_VIEW_MODE_NIGHT_GRN, Fsm_Event.MENU_BTN): (State.MENU_VIEW_MODE, menu_trans),#grn_night-view_mode
-    (State.MENU_VIEW_MODE_NIGHT_GRN, Fsm_Event.ENC_A_BTN): (State.MENU_VIEW_MODE_NIGHT_GRN, menu_trans),#grn_night - grn_night vyber moznosti
-    (State.MENU_VIEW_MODE_NIGHT_GRN, Fsm_Event.ENC_A_RIGHT): (State.MENU_VIEW_MODE_NIGHT_GREY, menu_trans),#grn_night-grey_night
-    (State.MENU_VIEW_MODE_NIGHT_GRN, Fsm_Event.ENC_A_LEFT): (State.MENU_VIEW_MODE_DAY, menu_trans),#grn_night-day
-    (State.MENU_VIEW_MODE_NIGHT_GREY, Fsm_Event.MENU_BTN): (State.MENU_VIEW_MODE, menu_trans),#grey_night-view_mode
-    (State.MENU_VIEW_MODE_NIGHT_GREY, Fsm_Event.ENC_A_BTN): (State.MENU_VIEW_MODE_NIGHT_GREY, menu_trans),#grey_night - grey_night vyber moznosti
-    (State.MENU_VIEW_MODE_NIGHT_GREY, Fsm_Event.ENC_A_RIGHT): (State.MENU_VIEW_MODE_DAY, menu_trans),#grey_night-day
-    (State.MENU_VIEW_MODE_NIGHT_GREY, Fsm_Event.ENC_A_LEFT): (State.MENU_VIEW_MODE_NIGHT_GRN, menu_trans),#grey_night-grn_night
-    (State.MENU_CROSS, Fsm_Event.MENU_BTN): (State.LIVE, off_menu_trans), #cross-live
-    (State.MENU_VIEW_MODE, Fsm_Event.MENU_BTN): (State.LIVE, off_menu_trans), #view_mode-live
-    (State.MENU_SELECT_CONFIG, Fsm_Event.MENU_BTN): (State.LIVE, off_menu_trans),
+    (State.MENU_VIEW_MODE_DAY, Fsm_Event.ENC_A_BTN): (State.MENU_VIEW_MODE_DAY, switch_mode),#day-day vyber moznosti
+    (State.MENU_VIEW_MODE_DAY, Fsm_Event.ENC_A_RIGHT): (State.MENU_VIEW_MODE_NIGHT, menu_trans),#day-grn_night
+    (State.MENU_VIEW_MODE_DAY, Fsm_Event.ENC_A_LEFT): (State.MENU_VIEW_MODE_NIGHT, menu_trans),#day-grey_night
+    (State.MENU_VIEW_MODE_NIGHT, Fsm_Event.ENC_A_BTN): (State.MENU_VIEW_MODE_NIGHT, switch_mode),#grey_night - grey_night vyber moznosti
+    (State.MENU_VIEW_MODE_NIGHT, Fsm_Event.ENC_A_RIGHT): (State.MENU_VIEW_MODE_DAY, menu_trans),#grey_night-day
+    (State.MENU_VIEW_MODE_NIGHT, Fsm_Event.ENC_A_LEFT): (State.MENU_VIEW_MODE_DAY, menu_trans),
+    (State.MENU_VIEW_MODE_NIGHT, Fsm_Event.MENU_BTN): (State.MENU_VIEW_MODE, menu_trans),
+    (State.MENU_CROSS, Fsm_Event.MENU_BTN): (State.LIVE, save_ctx_trans), #cross-live
+    (State.MENU_VIEW_MODE, Fsm_Event.MENU_BTN): (State.LIVE, save_ctx_trans), #view_mode-live
+    (State.MENU_SELECT_CONFIG, Fsm_Event.MENU_BTN): (State.LIVE, save_ctx_trans),
     (State.MENU_SELECT_CONFIG, Fsm_Event.ENC_A_RIGHT): (State.MENU_CROSS, menu_trans),
     (State.MENU_SELECT_CONFIG, Fsm_Event.ENC_A_LEFT): (State.MENU_VIEW_MODE, menu_trans),
     (State.MENU_SELECT_CONFIG, Fsm_Event.ENC_A_BTN): (State.MENU_SELECT_CONFIG_0, menu_trans),

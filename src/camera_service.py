@@ -7,6 +7,7 @@ import numpy as np
 import cv2
 from cross_type import Cross_type
 from clip_recorder import ClipRecorderRing
+from mode import Mode
 
 
 class Camera_Service:
@@ -57,6 +58,11 @@ class Camera_Service:
 
     def make_clip(self):
         self.cmd_queue.put(Cam_Event.CLIP)
+    
+    def change_mode(self):
+        self.cmd_queue.put(Cam_Event.MODE)
+    
+
 
     
 
@@ -64,6 +70,22 @@ class Camera_Service:
     def clear_toast(self):
         self.toast = False
         self.toast_text = ''
+    
+
+    def set_mode(self):
+        mode = self.ctx.mode
+        if(mode == Mode.DAY):
+            self.picam.set_controls({
+                "Saturation": 1.0,
+                "Contrast": 1.0,
+                "AwbEnable": True,
+            })
+        else:
+            self.picam.set_controls({
+                "Saturation": 0.0,
+                "Contrast": 1.15,
+                "AwbEnable": False,  # někdy pomůže pro stabilitu v noci
+            })
 
     def make_rectangle(self, frame, x, y, offset, thickness, text_width, text_height):
         xr = x - offset
@@ -217,6 +239,7 @@ class Camera_Service:
         seconds=10,
         bitrate=5_000_000,
         fps=self.fps)
+        self.set_mode()
         self.clip_recorder.start()
 
         self.ctx.context_saver.ctx_from_config()
@@ -263,6 +286,12 @@ class Camera_Service:
                 elif cmd == Cam_Event.CLIP:
                     if self.clip_recorder:
                         self.clip_recorder.request_clip()
+                
+                elif cmd == Cam_Event.MODE:
+                    self.set_mode()
+                    
+                
+               
 
         finally:
             if self.picam:

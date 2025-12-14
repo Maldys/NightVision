@@ -7,5 +7,6 @@ class Cam_Event(Enum):
     SHOW_OVERLAY = auto()
     HIDE_OVERLAY = auto()
     TOAST = auto()
-    #REC = auto()
+    MODE = auto()
+    
   
