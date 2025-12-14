@@ -1,0 +1,23 @@
+nightvision/
+├─ main.py                  # hlavní program – stavový automat, řízení logiky
+│
+├─ camera/                 # práce s kamerou a obrazem
+│   ├─ pipeline.py         # inicializace kamery, náhled, záznam, circular buffer
+│   ├─ overlay.py          # kreslení zaměřovacího kříže, textového menu
+│   └─ __init__.py
+│
+├─ io/                     # fyzické vstupy/výstupy (GPIO)
+│   ├─ buttons.py          # tlačítka (zapnutí, menu, záznam)
+│   ├─ encoders.py         # rotační enkodéry (zoom, menu navigace)
+│   ├─ ir_led.py           # IR přísvit – řízení PWM přes pigpio
+│   └─ __init__.py
+│
+├─ utils/                  # podpůrné funkce a definice
+│   ├─ state_machine.py    # přechody stavů, definice všech režimů
+│   ├─ config.py           # načítání a ukládání nastavení (JSON)
+│   └─ logger.py           # ladicí logy, volitelné
+│
+├─ config/
+│   └─ settings.json       # uložené nastavení: jas IR, pozice kříže, režim dne/noci
+│
+└─ README.md               # popis projektu

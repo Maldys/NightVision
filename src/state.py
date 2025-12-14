@@ -1,0 +1,32 @@
+from enum import Enum, auto
+
+
+class State(Enum):
+    LIVE = auto()
+    CLIP = auto()
+    MENU = auto()
+    MENU_CROSS = auto()
+    MENU_CROSS_COLOR = auto()
+    MENU_CROSS_COLOR_R = auto()
+    MENU_CROSS_COLOR_G = auto()
+    MENU_CROSS_COLOR_B = auto()
+    MENU_CROSS_TYPE = auto()
+    MENU_CROSS_TYPE_CROSS = auto()
+    MENU_CROSS_TYPE_DOT = auto()
+    MENU_CROSS_TYPE_HALO = auto()
+    MENU_CROSS_X = auto()
+    MENU_CROSS_X_SET = auto()
+    MENU_CROSS_Y = auto()
+    MENU_CROSS_Y_SET = auto()
+    MENU_VIEW_MODE = auto()
+    MENU_VIEW_MODE_DAY = auto()
+    MENU_VIEW_MODE_NIGHT_GRN = auto()
+    MENU_VIEW_MODE_NIGHT_GREY = auto()
+    MENU_SELECT_CONFIG = auto()
+    MENU_SELECT_CONFIG_0 = auto()
+    MENU_SELECT_CONFIG_1 = auto()
+    MENU_SELECT_CONFIG_2 = auto()
+    MENU_SELECT_CONFIG_3 = auto()
+    MENU_SELECT_CONFIG_4 = auto()
+    OFF = auto()
+    
