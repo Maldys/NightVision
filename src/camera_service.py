@@ -76,16 +76,29 @@ class Camera_Service:
         mode = self.ctx.mode
         if(mode == Mode.DAY):
             self.picam.set_controls({
+                "AeEnable": True,
+                "AwbEnable": True,
                 "Saturation": 1.0,
                 "Contrast": 1.0,
-                "AwbEnable": True,
+                "ExposureTime": 0,        
+                "AnalogueGain": 0.0,
+                "Brightness": 0.0,
             })
         else:
             self.picam.set_controls({
+                "AeEnable": False,
+                "ExposureTime": 40000,      # 40 ms
+                "AnalogueGain": 12.0,       # vysoký gain
+                "AwbEnable": False,         # vypnout AWB (jinak hýbe barvami)
+                "ColourGains": (1.0, 1.0),
                 "Saturation": 0.0,
-                "Contrast": 1.15,
-                "AwbEnable": False,  # někdy pomůže pro stabilitu v noci
+                "Sharpness": 0.0,
+                "Contrast": 1.0,               
+                "Brightness": 0.1,
             })
+
+            
+            
 
     def make_rectangle(self, frame, x, y, offset, thickness, text_width, text_height):
         xr = x - offset
@@ -128,10 +141,37 @@ class Camera_Service:
                 frame = m.array
                 h, w = frame.shape[:2]
 
+            scale = self.ctx.cross_params[self.ctx.sel_cross].scale
+
+
+            if self.ctx.mode == Mode.NIGHT:
+                gray = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+                gray = np.clip(gray.astype(np.float32) * 1.4, 0, 255).astype(np.uint8)
+                frame[:, :, 0] = gray
+                frame[:, :, 1] = gray
+                frame[:, :, 2] = gray
+            
+
+
+                
+            if scale >= 0.75:
+                    new_w = int(w / scale)
+                    new_h = int(h / scale)
+
+                    x0 = (w - new_w) // 2
+                    y0 = (h - new_h) // 2
+                    x1 = x0 + new_w
+                    y1 = y0 + new_h
+
+                    cropped = frame[y0:y1, x0:x1]
+                    zoomed = cv2.resize(cropped, (w, h), interpolation=cv2.INTER_LINEAR)
+
+                    frame[:] = zoomed
+
             cx = w // 2 - self.ctx.cross_params[self.ctx.sel_cross].x_offset
             cy = h // 2 - self.ctx.cross_params[self.ctx.sel_cross].y_offset
 
-            sz = self.ctx.cross_params[self.ctx.sel_cross].size  # size
+            sz = int(self.ctx.cross_params[self.ctx.sel_cross].size)  # size
             th = self.ctx.cross_params[self.ctx.sel_cross].thickness  # line thickness
 
             r, g, b = self.ctx.cross_params[self.ctx.sel_cross].color
@@ -212,12 +252,15 @@ class Camera_Service:
                     lineType=cv2.LINE_AA,
                 )
 
+                
+
+
         except Exception as e:
             print("frame_callback error:", repr(e))
 
     def worker(self):
-
-        self.picam = Picamera2()
+        tuning = Picamera2.load_tuning_file("/usr/share/libcamera/ipa/rpi/vc4/imx708_noir.json")
+        self.picam = Picamera2(tuning=tuning)
         config = self.picam.create_video_configuration(
             main={"format": "RGB888", "size": (640, 640)},
             lores={"format": "YUV420", "size": (640, 480)},

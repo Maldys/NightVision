@@ -126,18 +126,80 @@ def select_config(state, ctx: Context):
     ctx.sel_cross = config_to_select
     ctx.camera.show_toast(f'SELECTED CONFIG: {config_to_select}')
 
-def switch_mode(state, ctx: Context):
+def mode_night(state, ctx: Context):
     menu_trans(state, ctx)
     if ctx.mode == Mode.DAY:
         sw_mode = Mode.NIGHT
-    else:
+        ctx.pwm_ir.on()
+        ctx.mode = sw_mode
+        ctx.camera.change_mode()
+        ctx.camera.show_toast(f"{sw_mode.name} SELECTED")
+
+def mode_day(state, ctx: Context):
+    if ctx.mode == Mode.NIGHT:
         sw_mode = Mode.DAY
-    ctx.mode = sw_mode
-    ctx.camera.change_mode()
-    ctx.camera.show_toast(f"{sw_mode.name} SELECTED")
+        ctx.pwm_ir.off()
+        ctx.ir_level = 0.0
+        ctx.mode = sw_mode
+        ctx.camera.change_mode()
+        ctx.camera.show_toast(f"{sw_mode.name} SELECTED")
+
+def zoom_in(ctx):
+    scale = ctx.cross_params[ctx.sel_cross].scale
+    if scale < 4.95:
+        scale = scale + 0.05
+        ctx.cross_params[ctx.sel_cross].scale = scale
+
+def zoom_out(ctx):
+    scale = ctx.cross_params[ctx.sel_cross].scale
+    if scale > 1.05:
+        scale = scale - 0.05
+        ctx.cross_params[ctx.sel_cross].scale = scale
+
+def enc_in_live_inc(state, ctx: Context):
+    if ctx.mode == Mode.NIGHT:
+        if ctx.ir_x_zoom:
+            zoom_out(ctx)
+        else:    
+            ir = ctx.ir_level
+            if(ir < 0.95):
+                ir = ir + 0.05
+                ctx.ir_level = ir    
+                ctx.pwm_ir.value= ir
+    else:
+        ctx.pwm_ir.off()
+        ctx.ir_level = 0.0
+        zoom_out(ctx)
+
+def enc_in_live_dec(state, ctx: Context):
+    if ctx.mode == Mode.NIGHT:
+        if ctx.ir_x_zoom:
+            zoom_in(ctx)
+        else:
+            ir = ctx.ir_level
+            if(ir > 0.05):
+                r = ir - 0.05
+                ctx.ir_level = ir    
+                ctx.pwm_ir.value = ir
+    else:
+        ctx.pwm_ir.off()
+        ctx.ir_level = 0.0
+        zoom_in(ctx)
+
+
+
+def enc_in_live_btn(state, ctx: Context):
+    ctx.context_saver.save_ctx()
+    if ctx.mode == Mode.NIGHT:
+        if ctx.ir_x_zoom:
+            ctx.ir_x_zoom = False
+            ctx.camera.show_toast('IR SET MODE')
+
+        else:
+            ctx.ir_x_zoom = True
+            ctx.camera.show_toast('ZOOM SET MODE')
+
     
-
-
 
 
 
@@ -147,6 +209,9 @@ transitions = {
     (State.LIVE, Fsm_Event.MENU_BTN): (State.MENU_CROSS, menu_trans),
     ('ANY', Fsm_Event.PWR_BTN_LONG): (State.OFF, cam_off),
     (State.LIVE, Fsm_Event.REC_BTN): (State.LIVE, clip),
+    (State.LIVE, Fsm_Event.ENC_A_RIGHT): (State.LIVE, enc_in_live_inc),
+    (State.LIVE, Fsm_Event.ENC_A_LEFT): (State.LIVE, enc_in_live_dec),
+    (State.LIVE, Fsm_Event.ENC_A_BTN): (State.LIVE, enc_in_live_btn),
     (State.MENU_CROSS, Fsm_Event.ENC_A_LEFT): (State.MENU_SELECT_CONFIG, menu_trans),#cross-view_mode main
     (State.MENU_CROSS, Fsm_Event.ENC_A_RIGHT): (State.MENU_VIEW_MODE, menu_trans),#cross-view_mode main
     (State.MENU_CROSS, Fsm_Event.ENC_A_BTN): (State.MENU_CROSS_COLOR, menu_trans),#cross/color
@@ -202,10 +267,10 @@ transitions = {
     (State.MENU_VIEW_MODE, Fsm_Event.ENC_A_RIGHT): (State.MENU_SELECT_CONFIG, menu_trans),#view_mode-video main
     (State.MENU_VIEW_MODE, Fsm_Event.ENC_A_BTN): (State.MENU_VIEW_MODE_DAY, menu_trans),#view_mode/day
     (State.MENU_VIEW_MODE_DAY, Fsm_Event.MENU_BTN): (State.MENU_VIEW_MODE, menu_trans),#day-view_mode
-    (State.MENU_VIEW_MODE_DAY, Fsm_Event.ENC_A_BTN): (State.MENU_VIEW_MODE_DAY, switch_mode),#day-day vyber moznosti
+    (State.MENU_VIEW_MODE_DAY, Fsm_Event.ENC_A_BTN): (State.MENU_VIEW_MODE_DAY, mode_day),#day-day vyber moznosti
     (State.MENU_VIEW_MODE_DAY, Fsm_Event.ENC_A_RIGHT): (State.MENU_VIEW_MODE_NIGHT, menu_trans),#day-grn_night
     (State.MENU_VIEW_MODE_DAY, Fsm_Event.ENC_A_LEFT): (State.MENU_VIEW_MODE_NIGHT, menu_trans),#day-grey_night
-    (State.MENU_VIEW_MODE_NIGHT, Fsm_Event.ENC_A_BTN): (State.MENU_VIEW_MODE_NIGHT, switch_mode),#grey_night - grey_night vyber moznosti
+    (State.MENU_VIEW_MODE_NIGHT, Fsm_Event.ENC_A_BTN): (State.MENU_VIEW_MODE_NIGHT, mode_night),#grey_night - grey_night vyber moznosti
     (State.MENU_VIEW_MODE_NIGHT, Fsm_Event.ENC_A_RIGHT): (State.MENU_VIEW_MODE_DAY, menu_trans),#grey_night-day
     (State.MENU_VIEW_MODE_NIGHT, Fsm_Event.ENC_A_LEFT): (State.MENU_VIEW_MODE_DAY, menu_trans),
     (State.MENU_VIEW_MODE_NIGHT, Fsm_Event.MENU_BTN): (State.MENU_VIEW_MODE, menu_trans),
@@ -221,7 +286,7 @@ transitions = {
     (State.MENU_SELECT_CONFIG_0, Fsm_Event.ENC_A_BTN): (State.MENU_SELECT_CONFIG_0, select_config),
     (State.MENU_SELECT_CONFIG_1, Fsm_Event.MENU_BTN): (State.MENU_SELECT_CONFIG, menu_trans),
     (State.MENU_SELECT_CONFIG_1, Fsm_Event.ENC_A_RIGHT): (State.MENU_SELECT_CONFIG_2, menu_trans),
-    (State.MENU_SELECT_CONFIG_1, Fsm_Event.ENC_A_LEFT): (State.MENU_SELECT_CONFIG_1, menu_trans),
+    (State.MENU_SELECT_CONFIG_1, Fsm_Event.ENC_A_LEFT): (State.MENU_SELECT_CONFIG_0, menu_trans),
     (State.MENU_SELECT_CONFIG_1, Fsm_Event.ENC_A_BTN): (State.MENU_SELECT_CONFIG_1, select_config),
     (State.MENU_SELECT_CONFIG_2, Fsm_Event.MENU_BTN): (State.MENU_SELECT_CONFIG, menu_trans),
     (State.MENU_SELECT_CONFIG_2, Fsm_Event.ENC_A_RIGHT): (State.MENU_SELECT_CONFIG_3, menu_trans),
@@ -232,7 +297,7 @@ transitions = {
     (State.MENU_SELECT_CONFIG_3, Fsm_Event.ENC_A_LEFT): (State.MENU_SELECT_CONFIG_2, menu_trans),
     (State.MENU_SELECT_CONFIG_3, Fsm_Event.ENC_A_BTN): (State.MENU_SELECT_CONFIG_3, select_config),
     (State.MENU_SELECT_CONFIG_4, Fsm_Event.MENU_BTN): (State.MENU_SELECT_CONFIG, menu_trans),
-    (State.MENU_SELECT_CONFIG_4, Fsm_Event.ENC_A_RIGHT): (State.MENU_SELECT_CONFIG_1, menu_trans),
+    (State.MENU_SELECT_CONFIG_4, Fsm_Event.ENC_A_RIGHT): (State.MENU_SELECT_CONFIG_0, menu_trans),
     (State.MENU_SELECT_CONFIG_4, Fsm_Event.ENC_A_LEFT): (State.MENU_SELECT_CONFIG_3, menu_trans),
     (State.MENU_SELECT_CONFIG_4, Fsm_Event.ENC_A_BTN): (State.MENU_SELECT_CONFIG_4, select_config),
 }

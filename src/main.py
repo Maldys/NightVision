@@ -27,7 +27,7 @@ def menu_short():
 
 menu_btn.when_released = menu_short
 
-#REC BTN
+#REC BTN`9`
 rec_btn = Button(6, bounce_time=0.05)
 
 def rec_short():
