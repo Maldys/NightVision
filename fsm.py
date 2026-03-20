@@ -26,7 +26,7 @@ class FSM:
             self.state = State.OFF
             self.ctx.camera.shutdown()
             self.ctx.pwm_ir.value = 0.0
-            self.tx.ir_level = 0.0
+            self.ctx.ir_level = 0.0
             print('OFF')
             
         
