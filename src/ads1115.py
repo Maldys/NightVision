@@ -169,7 +169,7 @@ class ADS1115Reader:
         return round(self.get_voltage(channel) * 2, 2)+0.1
     
     def get_battery_percent(self, channel: int) -> float:
-        return round((self.get_battery_voltage(channel)-3.05) / 0.0115, 2)
+        return round((self.get_battery_voltage(channel)-3.66) / 0.0115, 2)
 
     def get_full_percent(self):
         val = self.get_battery_percent(0) + self.get_battery_percent(1)
