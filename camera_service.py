@@ -230,10 +230,13 @@ class Camera_Service:
                 )
 
             if self.show_bat:
+                volt1 = self.ctx.ads.get_battery_voltage(0)
+                volt2 = self.ctx.ads.get_battery_voltage(1)
+                percentage = self.ctx.ads.get_full_percent()
                 lines = [
-                    f"BAT1: {self.ctx.ads.get_battery_voltage(0)} V",
-                    f"BAT2: {self.ctx.ads.get_battery_voltage(1)} V",
-                    f"CHARGED: {self.ctx.ads.get_full_percent()}%",
+                    f"BAT1: {voltage1:.2f} V",
+                    f"BAT2: {voltage2:.2f} V",
+                    f"CHARGED: {percentage:.2f}%",
                 ]
 
                 
@@ -379,6 +382,7 @@ class Camera_Service:
                 
                 elif cmd == Cam_Event.MODE:
                     self.set_mode()
+
                 elif cmd == Cam_Event.BAT:
                     self.bat()
                     
