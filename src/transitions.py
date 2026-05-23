@@ -131,7 +131,6 @@ def mode_night(state, ctx: Context):
     menu_trans(state, ctx)
     if ctx.mode == Mode.DAY:
         sw_mode = Mode.NIGHT
-        ctx.pwm_ir.on()
         ctx.mode = sw_mode
         ctx.camera.change_mode()
         ctx.camera.show_toast(f"{sw_mode.name} SELECTED")
@@ -139,8 +138,6 @@ def mode_night(state, ctx: Context):
 def mode_day(state, ctx: Context):
     if ctx.mode == Mode.NIGHT:
         sw_mode = Mode.DAY
-        ctx.pwm_ir.off()
-        ctx.ir_level = 0.0
         ctx.mode = sw_mode
         ctx.camera.change_mode()
         ctx.camera.show_toast(f"{sw_mode.name} SELECTED")
@@ -158,49 +155,18 @@ def zoom_out(ctx):
         ctx.cross_params[ctx.sel_cross].scale = scale
 
 def enc_in_live_inc(state, ctx: Context):
-    if ctx.mode == Mode.NIGHT:
-        if ctx.ir_x_zoom:
-            zoom_out(ctx)
-        else:    
-            ir = ctx.ir_level
-            if(ir < 0.99):
-                ir = ir + 0.01
-                ctx.ir_level = ir    
-                ctx.pwm_ir.value= ir
-            print(ir)
-    else:
-        ctx.pwm_ir.off()
-        ctx.ir_level = 0.0
-        zoom_out(ctx)
+    zoom_out(ctx)
+        
+
 
 def enc_in_live_dec(state, ctx: Context):
-    if ctx.mode == Mode.NIGHT:
-        if ctx.ir_x_zoom:
-            zoom_in(ctx)
-        else:
-            ir = ctx.ir_level
-            if(ir > 0.01):
-                ir = ir - 0.01
-                ctx.ir_level = ir    
-                ctx.pwm_ir.value = ir
-            print(ir)
-    else:
-        ctx.pwm_ir.off()
-        ctx.ir_level = 0.0
-        zoom_in(ctx)
-
+    zoom_in(ctx)
+        
 
 
 def enc_in_live_btn(state, ctx: Context):
     ctx.context_saver.save_ctx()
-    if ctx.mode == Mode.NIGHT:
-        if ctx.ir_x_zoom:
-            ctx.ir_x_zoom = False
-            ctx.camera.show_toast('IR SET MODE')
-
-        else:
-            ctx.ir_x_zoom = True
-            ctx.camera.show_toast('ZOOM SET MODE')
+    ctx.camera.show_toast('CONFIG SAVED')
 
 
 def battery_status(state, ctx: Context):
